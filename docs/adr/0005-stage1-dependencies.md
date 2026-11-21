@@ -1,6 +1,6 @@
 # 0005 Stage 1 dependencies
 
-Status: proposed, awaiting founder approval. Lists the direct runtime and build/test dependencies of `apps/api` and
+Status: accepted (founder approval, 2026-11-21). Lists the direct runtime and build/test dependencies of `apps/api` and
 `apps/mobile` at stage 1. Every package is MIT or Apache-2.0. Versions come from the pnpm `catalog`.
 
 ## Context

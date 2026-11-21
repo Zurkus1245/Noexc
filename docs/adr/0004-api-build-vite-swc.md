@@ -1,6 +1,6 @@
 # 0004 API build: Vite SSR with unplugin-swc
 
-Status: proposed, awaiting founder approval.
+Status: accepted (founder approval, 2026-11-21).
 
 ## Context
 `apps/api` is a NestJS service that depends on TypeScript workspace packages (`@noexcuse/contracts`, `@noexcuse/domain`)
