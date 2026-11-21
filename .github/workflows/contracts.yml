@@ -1,0 +1,31 @@
+name: contracts
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      affected: ${{ steps.affected.outputs.affected }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - id: affected
+        uses: ./.github/actions/affected
+        with:
+          package: "@noexcuse/contracts"
+
+  # Fails when the public contract changed without its regenerated snapshot (docs/contracts/api.d.ts).
+  contract-diff:
+    needs: detect
+    if: needs.detect.outputs.affected == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm contracts:check

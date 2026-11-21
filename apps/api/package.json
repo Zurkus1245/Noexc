@@ -1,0 +1,47 @@
+{
+  "name": "@noexcuse/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --ssr src/main.ts --watch",
+    "start:dev": "node --env-file-if-exists=../../.env --watch dist/main.js",
+    "build": "vite build --ssr src/main.ts",
+    "start": "node --env-file-if-exists=../../.env dist/main.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "node --env-file-if-exists=../../.env ./node_modules/vitest/vitest.mjs run",
+    "prisma:migrate": "node --env-file-if-exists=../../.env ./node_modules/prisma/build/index.js migrate dev",
+    "prisma:generate": "node --env-file-if-exists=../../.env ./node_modules/prisma/build/index.js generate",
+    "auth:keygen": "node scripts/auth-keygen.mjs",
+    "postinstall": "node ./node_modules/prisma/build/index.js generate"
+  },
+  "dependencies": {
+    "@noexcuse/contracts": "workspace:*",
+    "@noexcuse/domain": "workspace:*",
+    "@nestjs/common": "catalog:",
+    "@nestjs/core": "catalog:",
+    "@nestjs/platform-express": "catalog:",
+    "@prisma/adapter-pg": "catalog:",
+    "@prisma/client": "catalog:",
+    "jose": "catalog:",
+    "pg": "catalog:",
+    "rxjs": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@nestjs/testing": "catalog:",
+    "@noexcuse/config": "workspace:*",
+    "@swc/core": "catalog:",
+    "@types/express": "catalog:",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "@types/supertest": "catalog:",
+    "prisma": "catalog:",
+    "supertest": "catalog:",
+    "typescript": "catalog:",
+    "unplugin-swc": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

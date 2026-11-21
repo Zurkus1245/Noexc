@@ -1,0 +1,115 @@
+generator client {
+  provider          = "prisma-client"
+  output            = "../src/generated/prisma"
+  moduleFormat      = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  coach
+  client
+}
+
+enum ConsentType {
+  tos
+  health_data
+  coach_access
+  marketing
+}
+
+enum LinkStatus {
+  active
+  paused
+  ended
+}
+
+enum EndedBy {
+  coach
+  client
+  admin
+}
+
+model User {
+  id          String   @id @default(uuid()) @db.Uuid
+  authSubject String   @unique @db.VarChar(255)
+  role        UserRole
+  displayName String   @db.VarChar(80)
+  timezone    String   @db.VarChar(64)
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+
+  consents    Consent[]
+  invites     Invite[]
+  coachLinks  CoachClient[] @relation("coachLinks")
+  clientLinks CoachClient[] @relation("clientLinks")
+}
+
+// Append-only: a row is never updated or deleted except by account deletion.
+model Consent {
+  id        String      @id @default(uuid()) @db.Uuid
+  userId    String      @db.Uuid
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      ConsentType
+  version   String      @db.VarChar(32)
+  granted   Boolean
+  createdAt DateTime    @default(now()) @db.Timestamptz(3)
+
+  @@index([userId, type, createdAt])
+}
+
+model Invite {
+  id        String    @id @default(uuid()) @db.Uuid
+  coachId   String    @db.Uuid
+  coach     User      @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  codeHash  String    @unique @db.Char(64)
+  expiresAt DateTime  @db.Timestamptz(3)
+  usedAt    DateTime? @db.Timestamptz(3)
+  revokedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([coachId])
+}
+
+// At most one non-ended link per (coachId, clientId) and the open-parties check are created in the migration SQL.
+// A party is NULL only after that user deleted their account; the ended link stays with the other party.
+model CoachClient {
+  id        String    @id @default(uuid()) @db.Uuid
+  coachId   String?   @db.Uuid
+  clientId  String?   @db.Uuid
+  coach     User?     @relation("coachLinks", fields: [coachId], references: [id], onDelete: SetNull)
+  client    User?     @relation("clientLinks", fields: [clientId], references: [id], onDelete: SetNull)
+  status    LinkStatus
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  endedAt   DateTime? @db.Timestamptz(3)
+  endedBy   EndedBy?
+
+  // Keyset-paged link lists: the party column, then the (createdAt, id) order; the coach list also filters on status.
+  @@index([coachId, status, createdAt, id])
+  @@index([clientId, createdAt, id])
+}
+
+// Fixed-window counter; one row per (key, window) incremented atomically.
+model RateLimitHit {
+  key         String   @db.VarChar(255)
+  windowStart DateTime @db.Timestamptz(3)
+  hits        Int
+
+  @@id([key, windowStart])
+}
+
+// Keyed by auth subject without a foreign key: account deletion removes these rows explicitly, in the same transaction.
+model IdempotencyRecord {
+  subject        String    @db.VarChar(255)
+  key            String    @db.Uuid
+  requestHash    String    @db.Char(64)
+  responseStatus Int?
+  responseBody   Json?
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  expiresAt      DateTime  @db.Timestamptz(3)
+
+  @@id([subject, key])
+  @@index([expiresAt])
+}

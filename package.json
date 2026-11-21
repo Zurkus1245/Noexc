@@ -1,0 +1,25 @@
+{
+  "name": "noexcuse",
+  "private": true,
+  "packageManager": "pnpm@10.34.9",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "contracts:snapshot": "pnpm --filter @noexcuse/contracts snapshot",
+    "contracts:check": "pnpm --filter @noexcuse/contracts snapshot:check",
+    "format": "prettier --write ."
+  },
+  "prettier": "@noexcuse/config/prettier",
+  "devDependencies": {
+    "@noexcuse/config": "workspace:*",
+    "eslint": "catalog:",
+    "prettier": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:"
+  }
+}

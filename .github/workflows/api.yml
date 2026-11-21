@@ -1,0 +1,65 @@
+name: api
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: api-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      affected: ${{ steps.affected.outputs.affected }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - id: affected
+        uses: ./.github/actions/affected
+        with:
+          package: "@noexcuse/api"
+
+  verify:
+    needs: detect
+    if: needs.detect.outputs.affected == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: noexcuse
+          POSTGRES_PASSWORD: noexcuse
+          POSTGRES_DB: noexcuse
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U noexcuse -d noexcuse"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://noexcuse:noexcuse@localhost:5432/noexcuse?schema=public
+      AUTH_MODE: local
+      AUTH_ISSUER: noexcuse-local
+      AUTH_AUDIENCE: noexcuse-api
+      AUTH_JWKS_URL: http://localhost:3000/v1/auth/local/jwks
+      API_PORT: 3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      # "api..." = the app plus every workspace package it depends on.
+      - run: pnpm turbo run typecheck lint test build --filter="@noexcuse/api..."
+      - if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-dist-${{ github.sha }}
+          path: |
+            apps/api/dist
+            apps/api/prisma
+          retention-days: 14

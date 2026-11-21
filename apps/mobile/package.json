@@ -1,0 +1,51 @@
+{
+  "name": "@noexcuse/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@expo/log-box": "catalog:",
+    "@expo/metro-runtime": "catalog:",
+    "@hookform/resolvers": "catalog:",
+    "@noexcuse/api-client": "workspace:*",
+    "@noexcuse/contracts": "workspace:*",
+    "@noexcuse/domain": "workspace:*",
+    "@noexcuse/ui": "workspace:*",
+    "@tanstack/react-query": "catalog:",
+    "expo": "catalog:",
+    "expo-clipboard": "catalog:",
+    "expo-constants": "catalog:",
+    "expo-crypto": "catalog:",
+    "expo-linking": "catalog:",
+    "expo-localization": "catalog:",
+    "expo-router": "catalog:",
+    "expo-secure-store": "catalog:",
+    "expo-status-bar": "catalog:",
+    "react": "catalog:",
+    "react-hook-form": "catalog:",
+    "react-native": "catalog:",
+    "react-native-safe-area-context": "catalog:",
+    "react-native-screens": "catalog:",
+    "zod": "catalog:",
+    "zustand": "catalog:"
+  },
+  "devDependencies": {
+    "@noexcuse/config": "workspace:*",
+    "@testing-library/react-native": "catalog:",
+    "@types/jest": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "jest": "catalog:",
+    "jest-expo": "catalog:",
+    "test-renderer": "catalog:",
+    "typescript": "catalog:"
+  }
+}

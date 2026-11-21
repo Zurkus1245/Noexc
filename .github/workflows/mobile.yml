@@ -1,0 +1,39 @@
+name: mobile
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      affected: ${{ steps.affected.outputs.affected }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - id: affected
+        uses: ./.github/actions/affected
+        with:
+          package: "@noexcuse/mobile"
+
+  verify:
+    needs: detect
+    if: needs.detect.outputs.affected == 'true'
+    runs-on: ubuntu-latest
+    env:
+      EXPO_PUBLIC_API_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: pnpm turbo run typecheck lint test --filter="@noexcuse/mobile..."
+      # Proves the JS bundle builds; store builds go through EAS, not this workflow.
+      - run: pnpm exec expo export --platform android --output-dir "$RUNNER_TEMP/expo-export"
+        working-directory: apps/mobile

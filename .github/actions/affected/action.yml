@@ -1,0 +1,26 @@
+name: Affected check
+description: Whether a workspace package or any of its dependencies changed since the base ref, per the Turborepo graph.
+inputs:
+  package:
+    description: Workspace package name, e.g. "@noexcuse/api"
+    required: true
+outputs:
+  affected:
+    description: '"true" or "false"'
+    value: ${{ steps.detect.outputs.affected }}
+runs:
+  using: composite
+  steps:
+    - id: detect
+      shell: bash
+      env:
+        PACKAGE: ${{ inputs.package }}
+        # Pushes compare with the previous tip; PRs with the target branch. A new branch has no "before".
+        BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
+      run: |
+        if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+          echo "affected=true" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        count=$(pnpm turbo ls --filter="${PACKAGE}...[${BASE}]" --output=json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).packages.count))')
+        if [ "$count" -gt 0 ]; then echo "affected=true"; else echo "affected=false"; fi >> "$GITHUB_OUTPUT"

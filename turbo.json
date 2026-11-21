@@ -1,0 +1,24 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "typecheck": {},
+    "lint": {},
+    "test": {
+      "cache": false,
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "NODE_ENV",
+        "AUTH_MODE",
+        "AUTH_ISSUER",
+        "AUTH_AUDIENCE",
+        "AUTH_JWKS_URL",
+        "LOCAL_AUTH_PRIVATE_KEY_PEM",
+        "API_PORT"
+      ]
+    }
+  }
+}
