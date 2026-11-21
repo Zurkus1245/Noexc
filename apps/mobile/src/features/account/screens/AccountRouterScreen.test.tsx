@@ -66,7 +66,7 @@ describe('AccountRouterScreen consent gate', () => {
   it('routes a client with current mandatory consents to the client home', async () => {
     stubAccount('client', [currentTos(), currentHealth()]);
     await renderWithApi(<AccountRouterScreen />);
-    expect(await screen.findByText('redirect:/redeem')).toBeTruthy();
+    expect(await screen.findByText('redirect:/links')).toBeTruthy();
   });
 
   it('routes a coach with current terms to the coach home', async () => {

@@ -47,6 +47,7 @@ export const ru: Record<MessageKey, string> = {
   'client.redeem': 'Вступить',
   'client.linksTitle': 'Мои тренеры',
   'client.linksEmpty': 'Вы не связаны с тренером.',
+  'client.joinCta': 'Ввести код приглашения',
   'client.endLink': 'Завершить связь',
   'client.endLinkTitle': 'Завершить связь?',
   'client.endLinkBody': 'Тренер больше не увидит ваши данные.',

@@ -45,6 +45,7 @@ export const en = {
   'client.redeem': 'Join coach',
   'client.linksTitle': 'My coaches',
   'client.linksEmpty': 'You are not linked to a coach.',
+  'client.joinCta': 'Enter invite code',
   'client.endLink': 'End link',
   'client.endLinkTitle': 'End this link?',
   'client.endLinkBody': 'The coach will no longer see your data.',

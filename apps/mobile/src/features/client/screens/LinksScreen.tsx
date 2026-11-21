@@ -1,5 +1,6 @@
+import { useRouter } from 'expo-router';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
-import { Screen, Text, spacing } from '@noexcuse/ui';
+import { Button, Screen, Text, spacing } from '@noexcuse/ui';
 import { ApiErrorBanner } from '../../../shared/components/ApiErrorBanner';
 import { LoadingView } from '../../../shared/components/LoadingView';
 import { t } from '../../../shared/i18n';
@@ -7,6 +8,7 @@ import { LinkRow } from '../components/LinkRow';
 import { useEndLink, useMyLinks } from '../hooks/useClientActions';
 
 export function LinksScreen() {
+  const router = useRouter();
   const links = useMyLinks();
   const endLink = useEndLink();
 
@@ -41,7 +43,14 @@ export function LinksScreen() {
         refreshControl={
           <RefreshControl refreshing={links.isRefetching} onRefresh={() => void links.refetch()} />
         }
-        ListEmptyComponent={links.isSuccess ? <Text tone="muted">{t('client.linksEmpty')}</Text> : undefined}
+        ListEmptyComponent={
+          links.isSuccess ? (
+            <View style={styles.empty}>
+              <Text tone="muted">{t('client.linksEmpty')}</Text>
+              <Button label={t('client.joinCta')} onPress={() => router.navigate('/redeem')} />
+            </View>
+          ) : undefined
+        }
       />
     </Screen>
   );
@@ -54,4 +63,5 @@ const Separator = () => <View style={styles.separator} />;
 const styles = StyleSheet.create({
   list: { gap: spacing.sm, paddingBottom: spacing.xl },
   separator: { height: spacing.sm },
+  empty: { gap: spacing.md },
 });
