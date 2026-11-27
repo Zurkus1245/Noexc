@@ -10,17 +10,31 @@ import {
 } from './consent';
 
 export const INVITE_TTL_HOURS = 168;
-export const INVITE_CODE_LENGTH = 26;
+// 8 Crockford base32 characters = 40 random bits: short enough to dictate, strong enough with single use, the TTL
+// and the per-user redeem rate limit (ADR 0009).
+export const INVITE_CODE_LENGTH = 8;
+const INVITE_CODE_GROUP_LENGTH = 4;
+const INVITE_CODE_SEPARATOR = '-';
 
 // Crockford base32 alphabet: no I, L, O, U, so codes read unambiguously when typed.
 const CROCKFORD_BASE32_CLASS = '0-9A-HJKMNP-TV-Z';
 const INVITE_CODE_PATTERN = new RegExp(`^[${CROCKFORD_BASE32_CLASS}]{${INVITE_CODE_LENGTH}}$`);
+// Crockford decoding: letters people type for the digits they resemble.
+const CROCKFORD_LOOKALIKES: Readonly<Record<string, string>> = { O: '0', I: '1', L: '1' };
+const TYPING_NOISE = /[\s-]/g;
 
-export const InviteCodeSchema = z
-  .string()
-  .trim()
-  .toUpperCase()
-  .regex(INVITE_CODE_PATTERN);
+// What a person types (any case, spaces or dashes, O for 0, I or L for 1) maps to the one canonical code.
+export const normalizeInviteCode = (raw: string): string =>
+  raw
+    .toUpperCase()
+    .replace(TYPING_NOISE, '')
+    .replace(/[OIL]/g, (letter) => CROCKFORD_LOOKALIKES[letter] ?? letter);
+
+// Display form, grouped for reading aloud: ABCD-EFGH.
+export const formatInviteCode = (code: string): string =>
+  `${code.slice(0, INVITE_CODE_GROUP_LENGTH)}${INVITE_CODE_SEPARATOR}${code.slice(INVITE_CODE_GROUP_LENGTH)}`;
+
+export const InviteCodeSchema = z.string().transform(normalizeInviteCode).pipe(z.string().regex(INVITE_CODE_PATTERN));
 export type InviteCode = z.infer<typeof InviteCodeSchema>;
 
 export const CreateInviteResponseSchema = z.object({

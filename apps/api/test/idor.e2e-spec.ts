@@ -49,7 +49,7 @@ const EXPECTED_ROUTES = [
   'GET /v1/client/plans',
 ].sort();
 
-const UNKNOWN_CODE = '0123456789ABCDEFGHJKMNPQRS';
+const UNKNOWN_CODE = '7K2QM9XA';
 const NEW_PROFILE = { role: 'coach', displayName: 'Newcomer', timezone: 'Europe/Berlin' };
 const PRIVATE_KEY_PEM = process.env.LOCAL_AUTH_PRIVATE_KEY_PEM ?? '';
 const ISSUER = process.env.AUTH_ISSUER ?? '';

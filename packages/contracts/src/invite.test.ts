@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { CONSENT_TYPES, CONSENT_VERSION_MAX_LENGTH, CONSENT_VERSIONS, REQUIRED_CONSENT_TYPES } from './consent';
-import { INVITE_CODE_LENGTH, InviteCodeSchema, RedeemInviteBodySchema, RedeemInviteRequestSchema } from './invite';
+import {
+  formatInviteCode,
+  INVITE_CODE_LENGTH,
+  InviteCodeSchema,
+  RedeemInviteBodySchema,
+  RedeemInviteRequestSchema,
+} from './invite';
 
-const VALID_CODE = '0123456789ABCDEFGHJKMNPQRS';
+const VALID_CODE = '7K2QM9XA';
 
 const requiredConsents = REQUIRED_CONSENT_TYPES.map((type) => ({
   type,
@@ -11,7 +17,7 @@ const requiredConsents = REQUIRED_CONSENT_TYPES.map((type) => ({
 }));
 
 describe('InviteCodeSchema', () => {
-  it('accepts a 26-character Crockford base32 code', () => {
+  it('accepts an 8-character Crockford base32 code', () => {
     expect(VALID_CODE).toHaveLength(INVITE_CODE_LENGTH);
     expect(InviteCodeSchema.parse(VALID_CODE)).toBe(VALID_CODE);
   });
@@ -21,11 +27,25 @@ describe('InviteCodeSchema', () => {
   });
 
   it.each([
+    ['the grouped display form', formatInviteCode(VALID_CODE)],
+    ['spaces and dashes', ` ${VALID_CODE.slice(0, 2)} ${VALID_CODE.slice(2, 5)}-${VALID_CODE.slice(5)} `],
+  ])('accepts %s', (_label, typed) => {
+    expect(InviteCodeSchema.parse(typed)).toBe(VALID_CODE);
+  });
+
+  it('reads the Crockford look-alikes O as 0 and I or L as 1', () => {
+    expect(InviteCodeSchema.parse('O1IL2345')).toBe('01112345');
+  });
+
+  it('groups the display form in two halves', () => {
+    expect(formatInviteCode(VALID_CODE)).toBe('7K2Q-M9XA');
+  });
+
+  it.each([
     ['too short', VALID_CODE.slice(1)],
     ['too long', `${VALID_CODE}0`],
-    ['excluded letter I', `I${VALID_CODE.slice(1)}`],
     ['excluded letter U', `U${VALID_CODE.slice(1)}`],
-    ['non-alphabet symbol', `-${VALID_CODE.slice(1)}`],
+    ['non-alphabet symbol', `*${VALID_CODE.slice(1)}`],
   ])('rejects %s', (_label, code) => {
     expect(InviteCodeSchema.safeParse(code).success).toBe(false);
   });

@@ -12,7 +12,7 @@ import { ALL_REQUIRED_CONSENTS, createInvite, linkBetween, redeem, signIn } from
 const HOUR_MS = 60 * 60 * 1000;
 const INVITE_TTL_HOURS = 168;
 const START = new Date('2026-11-21T10:00:00.000Z');
-const UNKNOWN_CODE = '0123456789ABCDEFGHJKMNPQRS';
+const UNKNOWN_CODE = '7K2QM9XA';
 const STALE_VERSION = '2000-01-01';
 
 const withoutRequestId = (body: Record<string, unknown>) => {

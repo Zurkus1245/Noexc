@@ -447,17 +447,19 @@ export * from './user';
 // invite.d.ts
 import { z } from 'zod';
 export declare const INVITE_TTL_HOURS = 168;
-export declare const INVITE_CODE_LENGTH = 26;
-export declare const InviteCodeSchema: z.ZodString;
+export declare const INVITE_CODE_LENGTH = 8;
+export declare const normalizeInviteCode: (raw: string) => string;
+export declare const formatInviteCode: (code: string) => string;
+export declare const InviteCodeSchema: z.ZodPipe<z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>, z.ZodString>;
 export type InviteCode = z.infer<typeof InviteCodeSchema>;
 export declare const CreateInviteResponseSchema: z.ZodObject<{
     id: z.ZodUUID;
-    code: z.ZodString;
+    code: z.ZodPipe<z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>, z.ZodString>;
     expiresAt: z.ZodISODateTime;
 }, z.core.$strip>;
 export type CreateInviteResponse = z.infer<typeof CreateInviteResponseSchema>;
 export declare const RedeemInviteBodySchema: z.ZodObject<{
-    code: z.ZodString;
+    code: z.ZodPipe<z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>, z.ZodString>;
     consents: z.ZodArray<z.ZodObject<{
         type: z.ZodEnum<{
             tos: "tos";
@@ -471,7 +473,7 @@ export declare const RedeemInviteBodySchema: z.ZodObject<{
 }, z.core.$strip>;
 export type RedeemInviteBody = z.infer<typeof RedeemInviteBodySchema>;
 export declare const RedeemInviteRequestSchema: z.ZodObject<{
-    code: z.ZodString;
+    code: z.ZodPipe<z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>, z.ZodString>;
     consents: z.ZodArray<z.ZodObject<{
         type: z.ZodEnum<{
             tos: "tos";

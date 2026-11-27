@@ -1,4 +1,5 @@
 import * as Clipboard from 'expo-clipboard';
+import { formatInviteCode } from '@noexcuse/contracts';
 import { useState } from 'react';
 import { Button, ErrorBanner, Text, spacing } from '@noexcuse/ui';
 import { StyleSheet, View } from 'react-native';
@@ -13,9 +14,10 @@ interface InviteCodeCardProps {
 export function InviteCodeCard({ code, expiresAt }: InviteCodeCardProps) {
   const [copied, setCopied] = useState(false);
   const [copyFailed, setCopyFailed] = useState(false);
+  const displayCode = formatInviteCode(code);
   const copy = async () => {
     try {
-      await Clipboard.setStringAsync(code);
+      await Clipboard.setStringAsync(displayCode);
       setCopied(true);
       setCopyFailed(false);
     } catch {
@@ -28,7 +30,7 @@ export function InviteCodeCard({ code, expiresAt }: InviteCodeCardProps) {
     <View style={styles.card}>
       <Text variant="label">{t('coach.codeLabel')}</Text>
       <Text variant="title" selectable accessibilityLabel={t('coach.codeLabel')}>
-        {code}
+        {displayCode}
       </Text>
       <Text variant="caption" tone="muted">
         {t('coach.expires', { date: expires })}

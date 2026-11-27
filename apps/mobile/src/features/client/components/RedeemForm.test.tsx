@@ -8,7 +8,7 @@ jest.mock('expo-localization', () => ({
   getCalendars: () => [{ timeZone: 'Europe/Berlin' }],
 }));
 
-const VALID_CODE = '0123456789ABCDEFGHJKMNPQRS';
+const VALID_CODE = '7K2QM9XA';
 const CONSENT_LABELS = {
   tos: 'I accept the Terms of Service',
   health_data: 'I consent to processing my health data',

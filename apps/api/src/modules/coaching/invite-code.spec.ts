@@ -24,7 +24,7 @@ describe('RandomInviteCodeGenerator', () => {
 
 describe('hashInviteCode', () => {
   it('stores the sha256 hex digest, never the code itself', () => {
-    const code = '0123456789ABCDEFGHJKMNPQRS';
+    const code = '7K2QM9XA';
 
     expect(hashInviteCode(code)).toBe(createHash('sha256').update(code).digest('hex'));
     expect(hashInviteCode(code)).toHaveLength(64);

@@ -39,7 +39,7 @@ function buildService(overrides: {
   const session = { findPublicProfiles: vi.fn(), ...overrides.session };
   const rateLimiter = { consume: vi.fn(async () => undefined) };
   const clock = { now: () => NOW };
-  const codes = { generate: () => '0123456789ABCDEFGHJKMNPQRS' };
+  const codes = { generate: () => '7K2QM9XA' };
   return new CoachingService(
     repo as unknown as CoachingRepository,
     access as unknown as AccessPolicy,
