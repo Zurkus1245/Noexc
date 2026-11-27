@@ -15,6 +15,10 @@ const MESSAGE_KEY_BY_CODE: Record<ApiErrorCode, MessageKey> = {
   CONSENT_REQUIRED: 'error.CONSENT_REQUIRED',
   RATE_LIMITED: 'error.RATE_LIMITED',
   IDEMPOTENCY_CONFLICT: 'error.IDEMPOTENCY_CONFLICT',
+  VERSION_CONFLICT: 'error.VERSION_CONFLICT',
+  WORKOUT_SCHEDULED: 'error.WORKOUT_SCHEDULED',
+  WORKOUT_NOT_IN_PLAN: 'error.WORKOUT_NOT_IN_PLAN',
+  ENTRY_ID_CONFLICT: 'error.ENTRY_ID_CONFLICT',
   INTERNAL: 'error.INTERNAL',
   unknown: 'error.INTERNAL',
   NETWORK_ERROR: 'error.NETWORK_ERROR',
@@ -39,3 +43,6 @@ export const isNetworkError = (error: unknown): boolean =>
   error instanceof ApiError && error.code === 'NETWORK_ERROR';
 
 export const isNotFoundError = (error: unknown): boolean => error instanceof ApiError && error.code === 'NOT_FOUND';
+
+export const isVersionConflictError = (error: unknown): boolean =>
+  error instanceof ApiError && error.code === 'VERSION_CONFLICT';

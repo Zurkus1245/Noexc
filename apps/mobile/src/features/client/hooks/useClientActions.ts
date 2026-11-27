@@ -1,12 +1,22 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { RedeemInviteRequest } from '@noexcuse/contracts';
 import { useApi } from '../../../shared/api/api-context';
 import { useIdempotencyKey } from '../../../shared/api/idempotency';
-import { linksQuery, linksQueryKey } from '../api/client-api';
+import { calendarQuery, linksQuery, linksQueryKey, plansQuery, type CalendarRange } from '../api/client-api';
 
 export const useMyLinks = () => {
   const api = useApi();
   return useInfiniteQuery(linksQuery(api));
+};
+
+export const useMyCalendar = (range: CalendarRange) => {
+  const api = useApi();
+  return useQuery(calendarQuery(api, range));
+};
+
+export const useMyPlans = () => {
+  const api = useApi();
+  return useQuery(plansQuery(api));
 };
 
 export const useRedeemInvite = () => {

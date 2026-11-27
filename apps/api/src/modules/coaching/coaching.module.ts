@@ -10,7 +10,7 @@ import { INVITE_CODE_GENERATOR, RandomInviteCodeGenerator } from './invite-code'
 import { InvitesController } from './invites.controller';
 import { ClientLinksController, LinkActionsController } from './links.controller';
 
-// Depends on consent and session, never on identity: identity calls into coaching for account deletion and export.
+// Depends on consent and session only. Plans reacts to link end through the LINK_LIFECYCLE_HOOK port, bound in plans.
 @Module({
   imports: [InfraModule, SessionModule, ConsentModule],
   controllers: [InvitesController, CoachClientsController, ClientLinksController, LinkActionsController],

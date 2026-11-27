@@ -1,0 +1,856 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NoExcuse · Кабинет тренера · wireframes</title>
+<style>
+:root{--blue:#2563EB;--green:#16A34A;--orange:#EA580C;--red:#DC2626;--bg:#F8FAFC;--surface:#FFFFFF;--text:#0F172A;--muted:#64748B;--border:#E2E8F0;--radius:12px;color-scheme:light}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--blue:#60A5FA;--green:#4ADE80;--orange:#FB923C;--red:#F87171;--bg:#0B1220;--surface:#131C2E;--text:#F1F5F9;--muted:#94A3B8;--border:#26334D;color-scheme:dark}}
+:root[data-theme="dark"]{--blue:#60A5FA;--green:#4ADE80;--orange:#FB923C;--red:#F87171;--bg:#0B1220;--surface:#131C2E;--text:#F1F5F9;--muted:#94A3B8;--border:#26334D;color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.4}
+h1{font-size:22px;margin:8px 0 4px}
+h2{font-size:18px;margin:4px 0}
+h3{font-size:16px;margin:0}
+.muted{color:var(--muted);font-size:14px;margin:0}
+.note{color:var(--muted);font-size:13px;margin:0}
+
+/* page header */
+.top{max-width:1100px;margin:0 auto;padding:16px}
+.lead{color:var(--muted);margin:0 0 12px}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.toc{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px}
+.toc h2{margin:8px 4px}
+.toc ol{margin:0;padding:0;list-style:none;columns:2;column-gap:24px}
+.toc li{break-inside:avoid}
+.toc a{display:flex;align-items:center;min-height:44px;color:var(--blue);text-decoration:none;font-size:14px}
+.toc a[aria-current="true"]{font-weight:700;text-decoration:underline}
+.toc .id{font-family:ui-monospace,Consolas,monospace;color:var(--muted);margin-right:8px;font-size:12px}
+
+/* stage */
+.stage{display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px}
+.meta{text-align:center}
+.meta b{font-family:ui-monospace,Consolas,monospace}
+.states{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.states button{min-height:44px;padding:0 14px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit;cursor:pointer}
+.states button[aria-pressed="true"]{background:var(--blue);border-color:var(--blue);color:var(--surface)}
+
+/* device frame */
+.frame{position:relative;display:flex;flex-direction:column;width:390px;max-width:100%;height:844px;background:var(--surface);border:10px solid var(--text);border-radius:44px;overflow:hidden}
+.frame.wide{width:768px;max-width:100%;height:640px;border-radius:24px}
+@media (max-width:480px){.frame,.frame.wide{width:100%;height:100vh;height:100dvh;border:0;border-radius:0}}
+
+.screen{display:none;flex:1;min-height:0;flex-direction:column}
+.screen.on{display:flex}
+.appbar{display:flex;align-items:center;gap:8px;min-height:56px;padding:0 16px;border-bottom:1px solid var(--border);font-weight:600;font-size:18px}
+.appbar .title{flex:1;min-width:0}
+.back{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;margin-left:-12px;color:var(--blue);text-decoration:none;font-size:28px;line-height:1}
+.body{flex:1;min-height:0;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.content{display:flex;flex-direction:column;gap:12px}
+.sv{display:none;flex-direction:column;gap:12px}
+.screen:not([data-state="normal"]) .content{display:none}
+.screen[data-state="loading"] .sv[data-s="loading"],
+.screen[data-state="empty"] .sv[data-s="empty"],
+.screen[data-state="error"] .sv[data-s="error"],
+.screen[data-state="offline"] .sv[data-s="offline"]{display:flex}
+
+.tabbar{display:grid;grid-template-columns:repeat(4,1fr);background:var(--surface);border-top:1px solid var(--border)}
+.tabbar a{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:56px;color:var(--muted);text-decoration:none;font-size:12px}
+.tabbar a[aria-current="page"]{color:var(--blue);font-weight:600}
+.tabbar i{font-style:normal;font-size:18px;line-height:1.2}
+
+/* components */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:8px;color:var(--text);text-decoration:none}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px}
+.grow{flex:1;min-width:0}
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:0 16px;border-radius:var(--radius);border:1px solid var(--blue);background:var(--blue);color:var(--surface);font:inherit;font-weight:600;text-decoration:none;cursor:pointer;width:100%;text-align:center}
+.btn.ghost{background:transparent;color:var(--blue)}
+.btn.danger{background:transparent;border-color:var(--red);color:var(--red)}
+.btn.solid-danger{background:var(--red);border-color:var(--red);color:var(--surface)}
+.btn.sm{width:auto}
+.btn[disabled]{opacity:.5;cursor:default}
+.btn.square{width:44px;min-width:44px;padding:0}
+.link{display:inline-flex;align-items:center;min-height:44px;color:var(--blue);text-decoration:none;font-weight:600}
+.field{display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--muted)}
+input,select,textarea{min-height:44px;width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font:inherit;font-size:16px}
+textarea{min-height:88px}
+input[type="checkbox"],input[type="radio"]{width:24px;min-height:24px;height:24px;margin:0;accent-color:var(--blue)}
+.check{display:flex;align-items:center;gap:10px;min-height:44px;font-size:15px}
+.err{color:var(--red);font-size:14px;margin:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.grid4 .field input{padding:8px 6px;text-align:center}
+.banner{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:var(--radius);background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--blue);font-size:14px}
+.banner.warn{border-left-color:var(--orange)}
+.banner.err{border-left-color:var(--red)}
+.st{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 10px;border-radius:999px;border:1px solid var(--border);font-size:13px;white-space:nowrap;background:var(--bg);color:var(--text)}
+.st i{font-style:normal;font-weight:700;color:var(--c)}
+.st-ok{--c:var(--green)}
+.st-miss{--c:var(--orange)}
+.st-inact{--c:var(--red)}
+.st-pause{--c:var(--muted)}
+.tag{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:999px;background:var(--bg);border:1px solid var(--border);font-size:13px;white-space:nowrap}
+.sk{height:72px;border-radius:var(--radius);background:var(--border);opacity:.6}
+.code{font-size:28px;font-weight:700;letter-spacing:3px;text-align:center;padding:16px;border:2px dashed var(--blue);border-radius:var(--radius);font-family:ui-monospace,Consolas,monospace;word-break:break-all}
+.seg{display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.seg a{flex:1;min-height:44px;display:flex;align-items:center;justify-content:center;color:var(--text);text-decoration:none;font-size:13px;text-align:center;padding:0 2px}
+.seg a[aria-current="true"]{background:var(--blue);color:var(--surface);font-weight:600}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.day{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:56px;border-radius:10px;font-size:12px;color:var(--muted);background:var(--surface);border:1px solid var(--border)}
+.day b{font-size:16px;color:var(--text)}
+.day[aria-current="date"]{border:2px solid var(--blue)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--c);display:inline-block}
+.grid3{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:0 8px;font-size:14px;align-items:center}
+.grid3 > div{padding:10px 0;border-bottom:1px solid var(--border)}
+.grid3 .head{font-size:12px;color:var(--muted);border-bottom:1px solid var(--border)}
+details{border-radius:var(--radius)}
+details summary{min-height:44px;display:flex;align-items:center;cursor:pointer;color:var(--blue);font-weight:600;list-style-position:inside}
+details .det{display:flex;flex-direction:column;gap:8px;padding-bottom:8px}
+.split-body{display:grid;grid-template-columns:280px 1fr;padding:0;gap:0;overflow:hidden}
+.split-left,.split-right{overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px;min-height:0}
+.split-left{border-right:1px solid var(--border)}
+@media (max-width:480px){.split-body{grid-template-columns:1fr}.split-right{display:none}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <h1>NoExcuse · кабинет тренера · low-fi прототип</h1>
+  <p class="lead">Нажимайте элементы в рамке телефона: переход между экранами идёт по хэшу (#SCR-…). Кнопка «‹» возвращает к родительскому экрану, нижняя панель — к корневым вкладкам. Переключатель состояний показывается над экранами, где они описаны. Планшетный вариант (master-detail) экрана «Клиенты»: <a class="link" href="#SCR-T41">SCR-T41</a>.</p>
+  <div class="legend" aria-label="Легенда статусов клиента">
+    <span class="st st-ok"><i aria-hidden="true">✓</i>В плане</span>
+    <span class="st st-miss"><i aria-hidden="true">!</i>Пропуск</span>
+    <span class="st st-inact"><i aria-hidden="true">●</i>Нет активности N дн.</span>
+    <span class="st st-pause"><i aria-hidden="true">❚❚</i>На паузе</span>
+  </div>
+  <nav class="toc" aria-label="Оглавление экранов">
+    <h2>Оглавление: путь тренера (ID из карты экранов)</h2>
+    <ol id="toc"></ol>
+  </nav>
+</header>
+
+<main class="stage">
+  <div class="meta">
+    <div><b id="cap-id"></b> <span id="cap-name"></span></div>
+    <div class="muted" id="cap-src"></div>
+  </div>
+  <div class="states" id="states" role="group" aria-label="Состояние экрана" hidden></div>
+
+  <div class="frame" id="frame">
+
+    <!-- 1. Вход -->
+    <section class="screen" id="SCR-S03" data-name="Вход" data-journey="JRN-01 шаг 2 · карта S03" data-states="loading,error,offline" data-state="normal">
+      <header class="appbar"><span class="title">Вход</span></header>
+      <div class="body">
+        <div class="content">
+          <h2>Войдите в кабинет тренера</h2>
+          <p class="muted">Один аккаунт — одна роль. Тренер и клиент не совмещаются в одном аккаунте.</p>
+          <a class="btn" href="#SCR-S05">Продолжить с Apple</a>
+          <a class="btn ghost" href="#SCR-S05">Продолжить с Google</a>
+          <div class="field">Почта
+            <input type="email" placeholder="name@example.com" aria-label="Почта">
+          </div>
+          <a class="btn ghost" href="#SCR-S05">Продолжить по почте</a>
+        </div>
+        <div class="sv" data-s="loading" role="status" aria-label="Загрузка">
+          <div class="sk"></div>
+          <button class="btn" disabled>Входим…</button>
+        </div>
+        <div class="sv" data-s="error">
+          <div class="banner err"><p class="err">Вход не выполнен. Попробуйте ещё раз.</p><span class="note">Код для поддержки: req_7F3A9C</span></div>
+          <a class="btn" href="#SCR-S03">Повторить</a>
+        </div>
+        <div class="sv" data-s="offline">
+          <div class="banner warn">Нет соединения. Вход недоступен, повторите позже.</div>
+          <button class="btn" disabled>Продолжить с Apple</button>
+          <button class="btn ghost" disabled>Продолжить с Google</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Профиль и часовой пояс -->
+    <section class="screen" id="SCR-S05" data-name="Профиль: имя и часовой пояс" data-journey="JRN-01 шаг 4 · карта S05" data-back="SCR-S03" data-state="normal">
+      <header class="appbar"><span class="title">Создайте профиль</span></header>
+      <div class="body">
+        <div class="content">
+          <label class="field">Имя (1–80 символов)
+            <input type="text" placeholder="Например, Мария">
+          </label>
+          <p class="err">Введите имя, чтобы продолжить</p>
+          <label class="field">Часовой пояс (определён по устройству)
+            <select><option selected>Europe/Berlin</option><option>Europe/Lisbon</option><option>Europe/Kyiv</option></select>
+          </label>
+          <p class="note">Часовой пояс нужен для дат тренировок и напоминаний. Роль «тренер» задана при входе и не меняется.</p>
+          <a class="btn" href="#SCR-T04">Продолжить</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Профиль тренера (вкладка) -->
+    <section class="screen" id="SCR-T42" data-name="Профиль тренера" data-journey="JRN-01 · вкладка «Профиль» · карта T42" data-tab="3" data-state="normal">
+      <header class="appbar"><span class="title">Профиль</span></header>
+      <div class="body">
+        <div class="content">
+          <div class="card">
+            <h3>Мария</h3>
+            <p class="muted">Часовой пояс: Europe/Berlin</p>
+            <a class="link" href="#SCR-S05">Изменить имя и часовой пояс</a>
+          </div>
+          <a class="card" href="#SCR-T42"><span class="row"><span>Уведомления</span><span class="muted">Должны / Should</span></span></a>
+          <a class="card" href="#SCR-T42"><span class="row"><span>Документы</span><span class="muted">›</span></span></a>
+          <a class="card" href="#SCR-T42"><span class="row"><span>Экспорт данных</span><span class="muted">›</span></span></a>
+          <a class="card" href="#SCR-T42"><span class="row"><span>Удалить аккаунт</span><span class="muted">›</span></span></a>
+          <a class="btn ghost" href="#SCR-S03">Выйти</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Пустой список клиентов -->
+    <section class="screen" id="SCR-T04" data-name="Пусто: нет клиентов" data-journey="JRN-01 шаг 5 · карта T04" data-tab="1" data-state="normal">
+      <header class="appbar"><span class="title">Клиенты</span></header>
+      <div class="body">
+        <div class="content" style="flex:1;justify-content:center;text-align:center">
+          <h2>Пригласите первого клиента</h2>
+          <p class="muted">Пригласите первого клиента за 5 минут: создайте код и отправьте ссылку в мессенджер.</p>
+          <a class="btn" href="#SCR-T09">Пригласить клиента</a>
+          <p class="note">Клиентов пока нет. Это штатное состояние, не ошибка.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Создать инвайт -->
+    <section class="screen" id="SCR-T09" data-name="Приглашение: создать" data-journey="JRN-01 шаг 6 · карта T09" data-back="SCR-T04" data-state="normal">
+      <header class="appbar"><span class="title">Новое приглашение</span></header>
+      <div class="body">
+        <div class="content">
+          <label class="field">Заметка для себя (клиенту не показывается)
+            <input type="text" placeholder="Например, знакомый из зала">
+          </label>
+          <label class="field">Срок действия
+            <select><option>24 часа</option><option>72 часа</option><option selected>7 дней (168 ч)</option></select>
+          </label>
+          <p class="note">Лимит: 10 приглашений в час.</p>
+          <a class="btn" href="#SCR-T10">Создать</a>
+          <a class="btn ghost" href="#SCR-T05">Отмена</a>
+        </div>
+        <div class="sv" data-s="error">
+          <div class="banner err">Не удалось создать приглашение. Проверьте сеть и повторите.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Приглашение создано: код, ссылка, поделиться -->
+    <section class="screen" id="SCR-T10" data-name="Приглашение создано" data-journey="JRN-01 шаг 7 · карта T10" data-back="SCR-T09" data-state="normal">
+      <header class="appbar"><span class="title">Приглашение создано</span></header>
+      <div class="body">
+        <div class="content">
+          <p class="muted">Код показан один раз. Срок действия: 7 дней.</p>
+          <div class="code" aria-label="Код приглашения">K7Q2-M9PX-W8TD</div>
+          <label class="field">Ссылка
+            <input id="invite-link" type="text" readonly value="https://noexcuse.example/join#K7Q2M9PXW8TD">
+          </label>
+          <button class="btn ghost" id="copy" type="button">Копировать</button>
+          <button class="btn" id="share" type="button">Поделиться</button>
+          <p class="note" id="msg" aria-live="polite"></p>
+          <a class="btn ghost" href="#SCR-T05">Готово</a>
+          <p class="note">После использования или отзыва код перестаёт работать.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Список клиентов со статусами -->
+    <section class="screen" id="SCR-T05" data-name="Список клиентов" data-journey="JRN-07 шаг 2 · карта T05, T06" data-tab="1" data-states="loading,empty,error,offline" data-state="normal">
+      <header class="appbar"><span class="title">Клиенты</span></header>
+      <div class="body">
+        <div class="content">
+          <input type="search" placeholder="Поиск по имени" aria-label="Поиск по имени">
+          <div class="row"><span class="muted">Активных клиентов: 4</span><a class="btn sm ghost" href="#SCR-T09">Пригласить</a></div>
+          <a class="card" href="#SCR-T13"><span class="row"><strong>Анна К.</strong><span class="st st-miss"><i aria-hidden="true">!</i>Пропуск</span></span></a>
+          <a class="card" href="#SCR-T13"><span class="row"><strong>Игорь М.</strong><span class="st st-inact"><i aria-hidden="true">●</i>Нет активности 8 дн.</span></span></a>
+          <a class="card" href="#SCR-T13"><span class="row"><strong>Лена П.</strong><span class="st st-ok"><i aria-hidden="true">✓</i>В плане</span></span></a>
+          <a class="card" href="#SCR-T13"><span class="row"><strong>Марк Л.</strong><span class="st st-pause"><i aria-hidden="true">❚❚</i>На паузе</span></span></a>
+          <div class="card"><span class="row"><span class="muted">Приглашение: ожидает клиента</span><span class="tag">Код до 7 дн.</span></span></div>
+        </div>
+        <div class="sv" data-s="loading" role="status" aria-label="Загрузка">
+          <div class="sk"></div><div class="sk"></div><div class="sk"></div>
+        </div>
+        <div class="sv" data-s="empty">
+          <div class="card"><h3>Клиентов пока нет</h3><p class="muted">Пригласите первого клиента, и он появится здесь.</p><a class="link" href="#SCR-T04">Открыть первое приглашение</a></div>
+        </div>
+        <div class="sv" data-s="error">
+          <div class="banner err"><p class="err">Не удалось загрузить список.</p><span class="note">Код для поддержки: req_5B1E0D</span></div>
+          <button class="btn" type="button">Повторить</button>
+        </div>
+        <div class="sv" data-s="offline">
+          <div class="banner warn">Нет соединения. Данные могут быть устаревшими.</div>
+          <p class="note">Список только для чтения. Приглашение недоступно без сети.</p>
+          <button class="btn" disabled>Пригласить (нужна сеть)</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8. Кому нужна реакция сегодня -->
+    <section class="screen" id="SCR-T03" data-name="Сегодня: кому нужна реакция" data-journey="JRN-07 шаги 3–4 · карта T03" data-tab="0" data-states="loading,empty,error,offline" data-state="normal">
+      <header class="appbar"><span class="title">Сегодня</span></header>
+      <div class="body">
+        <div class="content">
+          <p class="muted">Кому нужна реакция сегодня: 3</p>
+          <a class="card" href="#SCR-T13">
+            <span class="row"><strong>Анна К.</strong><span class="st st-miss"><i aria-hidden="true">!</i>Пропуск</span></span>
+            <span class="muted">Тренировка не отмечена · вчера</span>
+          </a>
+          <a class="card" href="#SCR-T13">
+            <span class="row"><strong>Игорь М.</strong><span class="st st-inact"><i aria-hidden="true">●</i>Нет активности 8 дн.</span></span>
+            <span class="muted">Запрос паузы: 3–10 дек.</span>
+          </a>
+          <a class="card" href="#SCR-T13">
+            <span class="row"><strong>Марк Л.</strong><span class="tag">Перенос запрошен</span></span>
+            <span class="muted">Вт, 13 янв. · ответьте в течение 24 ч</span>
+          </a>
+          <a class="link" href="#SCR-T05">Все клиенты</a>
+        </div>
+        <div class="sv" data-s="loading" role="status" aria-label="Загрузка">
+          <div class="sk"></div><div class="sk"></div>
+        </div>
+        <div class="sv" data-s="empty">
+          <div class="card"><h3>Сегодня всё спокойно</h3><p class="muted">Все клиенты в плане. Новых причин для реакции нет.</p><a class="link" href="#SCR-T05">Открыть список клиентов</a></div>
+        </div>
+        <div class="sv" data-s="error">
+          <div class="banner err"><p class="err">Не удалось загрузить список.</p><span class="note">Код для поддержки: req_2C8D41</span></div>
+          <button class="btn" type="button">Повторить</button>
+        </div>
+        <div class="sv" data-s="offline">
+          <div class="banner warn">Нет связи, данные могли устареть. Последний список показан только для чтения.</div>
+          <a class="link" href="#SCR-T05">Все клиенты</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Карточка клиента -->
+    <section class="screen" id="SCR-T13" data-name="Карточка клиента" data-journey="JRN-03 шаг 1 · JRN-05 · карта T13" data-back="SCR-T05" data-states="loading,error,offline" data-state="normal">
+      <header class="appbar"><span class="title">Анна К.</span></header>
+      <div class="body">
+        <div class="content">
+          <div class="card">
+            <span class="row"><strong>Анна К.</strong><span class="st st-miss"><i aria-hidden="true">!</i>Пропуск</span></span>
+            <span class="muted">Часовой пояс: Europe/Berlin · связь с 12 нояб.</span>
+          </div>
+          <div class="banner info">
+            <span>Клиент просит паузу: 3–10 дек., причина «Болезнь»</span>
+            <a class="btn sm ghost" href="#SCR-T15">Ответить на запрос</a>
+          </div>
+          <nav class="seg" aria-label="Разделы клиента">
+            <a href="#SCR-T13" aria-current="true">Обзор</a>
+            <a href="#SCR-T19">План</a>
+            <a href="#SCR-T24">Календарь</a>
+            <a href="#SCR-T30">Факт</a>
+            <a href="#SCR-T28">Питание</a>
+          </nav>
+          <div class="card">
+            <h3>Обзор</h3>
+            <span class="muted">Текущий блок: Неделя 2 · Сила</span>
+            <span class="muted">Версия плана: 3</span>
+            <span class="muted">Последняя отметка: вчера, 14 из 15 подходов</span>
+          </div>
+          <a class="btn ghost danger" href="#SCR-T39">Завершить связь</a>
+        </div>
+        <div class="sv" data-s="loading" role="status" aria-label="Загрузка">
+          <div class="sk"></div><div class="sk"></div>
+        </div>
+        <div class="sv" data-s="error">
+          <div class="banner err"><p class="err">Не удалось загрузить карточку клиента.</p><span class="note">Код для поддержки: req_9D2E77</span></div>
+          <button class="btn" type="button">Повторить</button>
+        </div>
+        <div class="sv" data-s="offline">
+          <div class="banner warn">Нет соединения. Данные могут быть устаревшими. Изменения недоступны.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10. План: блоки -->
+    <section class="screen" id="SCR-T19" data-name="План: блоки тренировок" data-journey="JRN-03 шаги 1–5 · карта T19" data-back="SCR-T13" data-states="loading,error" data-state="normal">
+      <header class="appbar"><span class="title">План · Неделя 2</span></header>
+      <div class="body">
+        <div class="content">
+          <div class="banner warn">У клиента версия 3, вы сохранили версию 4. Обновите у клиента, когда будете готовы.</div>
+          <div class="banner info">По «Дню А» есть факт: 2 выполнения. Правки не меняют факт.</div>
+          <div class="card">
+            <span class="row"><strong>Блок: Сила, 4 недели</strong><span class="tag">Версия 4</span></span>
+          </div>
+          <a class="card" href="#SCR-T20"><span class="row"><strong>День А — Ноги</strong><span class="muted">›</span></span><span class="muted">5 упражнений · около 45 мин</span></a>
+          <a class="card" href="#SCR-T20"><span class="row"><strong>День Б — Верх</strong><span class="muted">›</span></span><span class="muted">4 упражнения · около 40 мин</span></a>
+          <button class="btn ghost" type="button">Добавить тренировку</button>
+          <button class="btn" type="button">Обновить у клиента</button>
+        </div>
+        <div class="sv" data-s="loading" role="status" aria-label="Загрузка">
+          <div class="sk"></div><div class="sk"></div>
+        </div>
+        <div class="sv" data-s="error">
+          <div class="banner err"><p class="err">Не удалось загрузить план. Правки не сохранены.</p></div>
+          <button class="btn" type="button">Повторить</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11. Редактор тренировки -->
+    <section class="screen" id="SCR-T20" data-name="Редактор тренировки" data-journey="JRN-03 шаг 4 · карта T20" data-back="SCR-T19" data-state="normal">
+      <header class="appbar"><span class="title">День А — Ноги</span></header>
+      <div class="body">
+        <div class="content">
+          <details open>
+            <summary>Приседания</summary>
+            <div class="det">
+              <label class="field">Упражнение
+                <input type="text" value="Приседания">
+              </label>
+              <div class="grid2">
+                <label class="field">Подходы<input type="number" value="4" min="1"></label>
+                <label class="field">Повторы<input type="text" value="8"></label>
+                <label class="field">Вес, кг (необязательно)<input type="number" value="60"></label>
+                <label class="field">Отдых, сек. (до 600)<input type="number" value="90" max="600"></label>
+              </div>
+              <p class="err">Повторы: укажите число или диапазон, например 8–10</p>
+            </div>
+          </details>
+          <details>
+            <summary>Жим лёжа</summary>
+            <div class="det">
+              <label class="field">Упражнение<input type="text" value="Жим лёжа"></label>
+              <div class="grid2">
+                <label class="field">Подходы<input type="number" value="4"></label>
+                <label class="field">Повторы<input type="text" value="6–8"></label>
+              </div>
+            </div>
+          </details>
+          <button class="btn ghost" type="button">Добавить упражнение</button>
+          <a class="btn" href="#SCR-T19">Сохранить</a>
+          <p class="note">Изменения считаются сохранёнными только после ответа сервера.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12. Календарь клиента -->
+    <section class="screen" id="SCR-T24" data-name="Календарь клиента: неделя" data-journey="JRN-03 шаг 6 · JRN-06 · карта T24" data-back="SCR-T13" data-states="loading,empty,error,offline" data-state="normal">
+      <header class="appbar"><span class="title">Календарь · Анна К.</span></header>
+      <div class="body">
+        <div class="content">
+          <div class="stepper">
+            <button class="btn ghost sm" type="button" aria-label="Предыдущая неделя">‹ Неделя</button>
+            <span class="muted">23–29 нояб.</span>
+            <button class="btn ghost sm" type="button" aria-label="Следующая неделя">Неделя ›</button>
+          </div>
+          <div class="week" role="list" aria-label="Дни недели">
+            <span class="day" role="listitem" aria-current="date">Пн<b>23</b><span class="dot" style="--c:var(--green)" aria-hidden="true"></span></span>
+            <span class="day" role="listitem">Вт<b>24</b></span>
+            <span class="day" role="listitem">Ср<b>25</b></span>
+            <span class="day" role="listitem">Чт<b>26</b><span class="dot" style="--c:var(--orange)" aria-hidden="true"></span></span>
+            <span class="day" role="listitem">Пт<b>27</b><span class="dot" style="--c:var(--blue)" aria-hidden="true"></span></span>
+            <span class="day" role="listitem">Сб<b>28</b></span>
+            <span class="day" role="listitem">Вс<b>29</b></span>
+          </div>
+          <div class="card">
+            <span class="row"><strong>Пн 23 · День А — Ноги</strong><span class="st st-ok"><i aria-hidden="true">✓</i>Выполнено</span></span>
+          </div>
+          <div class="card">
+            <span class="row"><strong>Чт 26 · День А — Ноги</strong><span class="st st-miss"><i aria-hidden="true">!</i>Пропуск</span></span>
+            <a class="btn sm ghost" href="#SCR-T26">Перенести</a>
+          </div>
+          <div class="card">
+            <span class="row"><strong>Пт 27 · День Б — Верх</strong><span class="st st-ok"><i aria-hidden="true">✓</i>В плане</span></span>
+            <a class="btn sm ghost" href="#SCR-T26">Перенести</a>
+          </div>
+          <a class="btn" href="#SCR-T25">Назначить тренировку</a>
+        </div>
+        <div class="sv" data-s="loading" role="status" aria-label="Загрузка">
+          <div class="sk"></div><div class="sk"></div>
+        </div>
+        <div class="sv" data-s="empty">
+          <div class="card"><h3>На этой неделе не назначено</h3><p class="muted">Назначьте тренировки из плана на даты недели.</p><a class="btn" href="#SCR-T25">Назначить</a></div>
+        </div>
+        <div class="sv" data-s="error">
+          <div class="banner err"><p class="err">Не удалось загрузить календарь.</p><span class="note">Код для поддержки: req_3E6F02</span></div>
+          <button class="btn" type="button">Повторить</button>
+        </div>
+        <div class="sv" data-s="offline">
+          <div class="banner warn">Нет связи: только просмотр. Назначение и перенос недоступны.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 13. Назначить тренировку на дату -->
+    <section class="screen" id="SCR-T25" data-name="Назначить тренировку на дату" data-journey="JRN-03 шаг 6 · карта T25" data-back="SCR-T24" data-state="normal">
+      <header class="appbar"><span class="title">Назначить тренировку</span></header>
+      <div class="body">
+        <div class="content">
+          <p class="muted">Даты в часовом поясе клиента: Europe/Berlin</p>
+          <label class="check"><input type="radio" name="w" checked>День А — Ноги</label>
+          <label class="check"><input type="radio" name="w">День Б — Верх</label>
+          <div class="stepper">
+            <button class="btn ghost square" type="button" aria-label="Предыдущий день">‹</button>
+            <strong>Пт, 27 нояб. 2026</strong>
+            <button class="btn ghost square" type="button" aria-label="Следующий день">›</button>
+          </div>
+          <a class="btn" href="#SCR-T24">Назначить</a>
+          <a class="btn ghost" href="#SCR-T24">Отмена</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 14. Перенос тренировки -->
+    <section class="screen" id="SCR-T26" data-name="Перенос тренировки" data-journey="JRN-06 шаг 1 (тренер) · карта T26" data-back="SCR-T24" data-state="normal">
+      <header class="appbar"><span class="title">Перенос тренировки</span></header>
+      <div class="body">
+        <div class="content">
+          <div class="card">
+            <strong>День Б — Верх</strong>
+            <span class="muted">Было: пт, 27 нояб.</span>
+            <span class="muted">Факта по тренировке нет, перенос доступен.</span>
+          </div>
+          <div class="stepper">
+            <button class="btn ghost square" type="button" aria-label="Один день назад">‹</button>
+            <strong>Пн, 30 нояб. 2026</strong>
+            <button class="btn ghost square" type="button" aria-label="Один день вперёд">›</button>
+          </div>
+          <p class="note">Клиент получит уведомление без названия тренировки.</p>
+          <a class="btn" href="#SCR-T24">Перенести</a>
+          <details>
+            <summary>Удалить назначение</summary>
+            <div class="det">
+              <p class="muted">Назначение будет удалено. Отменить нельзя.</p>
+              <a class="btn solid-danger" href="#SCR-T24">Удалить</a>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- 15. Конфликт версии плана -->
+    <section class="screen" id="SCR-T22" data-name="Конфликт версии плана" data-journey="JRN-05 шаг 2 · карта T22" data-back="SCR-T19" data-state="normal">
+      <header class="appbar"><span class="title">План изменили</span></header>
+      <div class="body">
+        <div class="content">
+          <div class="banner err">План изменили в другой вкладке или на другом устройстве. Ваши правки не потеряны.</div>
+          <div class="grid2">
+            <div class="card">
+              <h3>Ваш черновик</h3>
+              <span class="muted">Основан на версии 3</span>
+              <span>Приседания: 5 × 5</span>
+              <span>Разгибания: удалить</span>
+            </div>
+            <div class="card">
+              <h3>Сейчас на сервере</h3>
+              <span class="muted">Версия 4</span>
+              <span>Приседания: 4 × 8</span>
+              <span>Разгибания: без изменений</span>
+            </div>
+          </div>
+          <p class="note">Черновик сохраняется на устройстве до вашего решения.</p>
+          <a class="btn" href="#SCR-T19">Перезагрузить и повторить</a>
+          <a class="btn ghost" href="#SCR-T19">Сохранить мои правки отдельно</a>
+          <a class="link" href="#SCR-T19">Отмена</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 16. План питания -->
+    <section class="screen" id="SCR-T28" data-name="План питания клиента" data-journey="JRN-08 · JRN-03 шаг 7 · карта T28" data-back="SCR-T13" data-state="normal">
+      <header class="appbar"><span class="title">Питание · цель на день</span></header>
+      <div class="body">
+        <div class="content">
+          <div class="grid4">
+            <label class="field">Ккал<input type="number" value="2100"></label>
+            <label class="field">Б, г<input type="number" value="150"></label>
+            <label class="field">Ж, г<input type="number" value="70"></label>
+            <label class="field">У, г<input type="number" value="200"></label>
+          </div>
+          <label class="field">Рекомендации (текст)
+            <textarea>Рацион-пример: овсянка, творог, рыба, овощи. Не медицинская рекомендация.</textarea>
+          </label>
+          <div class="banner warn">
+            <span>Пример: значение ниже порога. Порог утверждает специалист, в прототипе он не задан.</span>
+            <a class="btn sm ghost" href="#SCR-T29">Открыть предупреждение</a>
+          </div>
+          <button class="btn" type="button">Сохранить</button>
+          <p class="note">Предупреждение не блокирует сохранение.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 17. Предупреждение ниже порога -->
+    <section class="screen" id="SCR-T29" data-name="Предупреждение: ниже порога ккал" data-journey="JRN-03 шаг 7 · JRN-08 шаг 2 · карта T29" data-back="SCR-T28" data-state="normal">
+      <header class="appbar"><span class="title">Предупреждение</span></header>
+      <div class="body">
+        <div class="content">
+          <div class="banner warn">Значение ниже рекомендованного минимума. Это не медицинская рекомендация. Подтвердите, что план назначен специалистом.</div>
+          <label class="check"><input type="checkbox">Подтверждаю: назначено специалистом</label>
+          <a class="btn" href="#SCR-T28">Понятно, сохранить</a>
+          <a class="btn ghost" href="#SCR-T28">Изменить</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 18. Факт: план против выполнения -->
+    <section class="screen" id="SCR-T30" data-name="Факт: план против выполнения" data-journey="JRN-04 шаг 8 · JRN-05 шаг 5 · карта T30" data-back="SCR-T13" data-states="loading,empty" data-state="normal">
+      <header class="appbar"><span class="title">Факт · сегодня</span></header>
+      <div class="body">
+        <div class="content">
+          <p class="muted">Выполнено 14 из 15 подходов · по версии плана 3</p>
+          <div class="card">
+            <span class="row"><strong>День А — Ноги</strong><span class="st st-ok"><i aria-hidden="true">✓</i>Выполнено</span></span>
+          </div>
+          <div class="grid3" role="table" aria-label="План и факт">
+            <div class="head" role="columnheader">Упражнение</div>
+            <div class="head" role="columnheader">План</div>
+            <div class="head" role="columnheader">Факт</div>
+            <div>Приседания</div><div>4 × 8, 60 кг</div><div><span class="st st-ok"><i aria-hidden="true">✓</i>4 × 8, 60 кг</span></div>
+            <div>Жим лёжа</div><div>4 × 8, 80 кг</div><div><span class="st st-miss"><i aria-hidden="true">!</i>3 × 8, 80 кг</span></div>
+            <div>Разгибания</div><div>—</div><div><span class="tag">2 × 12, удалено из плана</span></div>
+          </div>
+          <p class="note">Факт не меняется при правках плана. Снимок упражнения сохранён.</p>
+          <a class="link" href="#SCR-T13">Назад к клиенту</a>
+        </div>
+        <div class="sv" data-s="loading" role="status" aria-label="Загрузка">
+          <div class="sk"></div><div class="sk"></div>
+        </div>
+        <div class="sv" data-s="empty">
+          <div class="card"><h3>Тренировка ещё не отмечена</h3><p class="muted">Отметки появятся, когда клиент начнёт тренировку.</p><a class="link" href="#SCR-T13">Назад к клиенту</a></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 19. Запрос клиента на паузу -->
+    <section class="screen" id="SCR-T15" data-name="Запрос клиента на паузу" data-journey="JRN-09 шаг 2 · карта T15" data-back="SCR-T13" data-state="normal">
+      <header class="appbar"><span class="title">Запрос на паузу</span></header>
+      <div class="body">
+        <div class="content">
+          <div class="card">
+            <h3>Игорь М. просит паузу</h3>
+            <span class="muted">Причина: болезнь · с 3 по 10 декабря</span>
+          </div>
+          <p class="note">Во время паузы напоминания выключены и пропуски не считаются. Доступ тренера к данным не меняется.</p>
+          <a class="btn" href="#SCR-T13">Подтвердить паузу</a>
+          <details>
+            <summary>Отклонить запрос</summary>
+            <div class="det">
+              <label class="field">Причина (короткий текст)<textarea></textarea></label>
+              <a class="btn danger" href="#SCR-T13">Отклонить</a>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- 20. Отвязка: подтверждение -->
+    <section class="screen" id="SCR-T39" data-name="Завершить связь (подтверждение)" data-journey="JRN-10 шаг 3 · карта T39" data-back="SCR-T13" data-state="normal">
+      <header class="appbar"><span class="title">Завершить связь?</span></header>
+      <div class="body">
+        <div class="content">
+          <div class="banner warn">
+            <span>Анна потеряет доступ к назначенным тренировкам сразу. Факт клиента перестанет быть видимым вам.</span>
+            <span>История останется у клиента. Будущие тренировки будут сняты. Клиент получит уведомление без причины.</span>
+          </div>
+          <label class="field">Причина
+            <select><option>Цель достигнута</option><option>Не сошлись</option><option>Другое</option></select>
+          </label>
+          <a class="btn solid-danger" href="#SCR-T16">Завершить связь</a>
+          <a class="btn ghost" href="#SCR-T13">Отмена</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 21. Связь завершена (история) -->
+    <section class="screen" id="SCR-T16" data-name="Связь завершена" data-journey="JRN-10 шаг 3 · карта T16" data-back="SCR-T05" data-state="normal">
+      <header class="appbar"><span class="title">Связь завершена</span></header>
+      <div class="body">
+        <div class="content">
+          <div class="banner info">Связь завершена. История у клиента.</div>
+          <div class="card">
+            <strong>План, только чтение</strong>
+            <span class="muted">Неделя 2 · День А — Ноги</span>
+            <span class="muted">Редактирование недоступно</span>
+          </div>
+          <a class="btn ghost" href="#SCR-T05">К списку клиентов</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 22. Шаблоны -->
+    <section class="screen" id="SCR-T34" data-name="Шаблоны" data-journey="карта T34 (Should)" data-tab="2" data-states="loading,empty,error,offline" data-state="normal">
+      <header class="appbar"><span class="title">Шаблоны</span></header>
+      <div class="body">
+        <div class="content">
+          <a class="card" href="#SCR-T19"><span class="row"><strong>Сила, 4 недели</strong><span class="muted">›</span></span><span class="muted">3 тренировки · версия 2</span></a>
+          <a class="card" href="#SCR-T19"><span class="row"><strong>Снижение нагрузки, 2 недели</strong><span class="muted">›</span></span><span class="muted">2 тренировки · версия 1</span></a>
+          <a class="btn" href="#SCR-T19">Создать из плана</a>
+        </div>
+        <div class="sv" data-s="loading" role="status" aria-label="Загрузка">
+          <div class="sk"></div><div class="sk"></div>
+        </div>
+        <div class="sv" data-s="empty">
+          <div class="card"><h3>Шаблонов пока нет</h3><p class="muted">Сохраните план клиента как шаблон, чтобы использовать его снова.</p><a class="btn" href="#SCR-T19">Создать из плана</a></div>
+        </div>
+        <div class="sv" data-s="error">
+          <div class="banner err"><p class="err">Не удалось загрузить шаблоны.</p><span class="note">Код для поддержки: req_6A0B19</span></div>
+          <button class="btn" type="button">Повторить</button>
+        </div>
+        <div class="sv" data-s="offline">
+          <div class="banner warn">Нет связи: шаблоны только для чтения.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 23. Планшет: master-detail -->
+    <section class="screen" id="SCR-T41" data-name="Планшет: клиенты, master-detail" data-journey="карта T41 · раздел 1.4 (от 768 pt)" data-frame="wide" data-state="normal">
+      <header class="appbar"><span class="title">Клиенты · планшет</span></header>
+      <div class="body split-body">
+        <div class="split-left">
+          <input type="search" placeholder="Поиск по имени" aria-label="Поиск по имени">
+          <a class="card" href="#SCR-T41" aria-current="true"><span class="row"><strong>Анна К.</strong><span class="st st-miss"><i aria-hidden="true">!</i>Пропуск</span></span></a>
+          <a class="card" href="#SCR-T41"><span class="row"><strong>Игорь М.</strong><span class="st st-inact"><i aria-hidden="true">●</i>Нет активности 8 дн.</span></span></a>
+          <a class="card" href="#SCR-T41"><span class="row"><strong>Лена П.</strong><span class="st st-ok"><i aria-hidden="true">✓</i>В плане</span></span></a>
+          <a class="card" href="#SCR-T41"><span class="row"><strong>Марк Л.</strong><span class="st st-pause"><i aria-hidden="true">❚❚</i>На паузе</span></span></a>
+        </div>
+        <div class="split-right">
+          <h2>Анна К.</h2>
+          <nav class="seg" aria-label="Разделы клиента">
+            <a href="#SCR-T41" aria-current="true">Обзор</a>
+            <a href="#SCR-T19">План</a>
+            <a href="#SCR-T24">Календарь</a>
+            <a href="#SCR-T30">Факт</a>
+          </nav>
+          <div class="card">
+            <span class="muted">Текущий блок: Неделя 2 · Сила</span>
+            <span class="muted">Версия плана: 3</span>
+            <span class="muted">Последняя отметка: вчера, 14 из 15 подходов</span>
+          </div>
+          <a class="btn ghost danger" href="#SCR-T39">Завершить связь</a>
+          <p class="note">Правая панель открывает вложенные разделы без ухода с экрана. В портрете она открывается поверх списка.</p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<script>
+(function () {
+  var FRAME = document.getElementById('frame');
+  var screens = Array.prototype.slice.call(document.querySelectorAll('.screen'));
+  var TABS = [['SCR-T03', 'Сегодня', '▦'], ['SCR-T05', 'Клиенты', '◉'], ['SCR-T34', 'Шаблоны', '▤'], ['SCR-T42', 'Профиль', '◯']];
+  var STATE_NAMES = { normal: 'Обычное', loading: 'Загрузка', empty: 'Пусто', error: 'Ошибка', offline: 'Офлайн' };
+
+  function decorate(s) {
+    var bar = s.querySelector('.appbar');
+    if (s.dataset.back) {
+      var back = document.createElement('a');
+      back.className = 'back';
+      back.href = '#' + s.dataset.back;
+      back.setAttribute('aria-label', 'Назад');
+      back.textContent = '‹';
+      bar.insertBefore(back, bar.firstChild);
+    }
+    if (s.dataset.tab !== undefined) {
+      var nav = document.createElement('nav');
+      nav.className = 'tabbar';
+      nav.setAttribute('aria-label', 'Основная навигация');
+      s.appendChild(nav);
+      var active = Number(s.dataset.tab);
+      TABS.forEach(function (t, i) {
+        var a = document.createElement('a');
+        a.href = '#' + t[0];
+        if (i === active) a.setAttribute('aria-current', 'page');
+        a.innerHTML = '<i aria-hidden="true">' + t[2] + '</i>' + t[1];
+        nav.appendChild(a);
+      });
+    }
+  }
+
+  function buildToc() {
+    var toc = document.getElementById('toc');
+    screens.forEach(function (s, i) {
+      var li = document.createElement('li');
+      var a = document.createElement('a');
+      a.href = '#' + s.id;
+      a.dataset.id = s.id;
+      var num = document.createElement('span');
+      num.className = 'id';
+      num.textContent = String(i + 1).padStart(2, '0') + ' ' + s.id;
+      a.appendChild(num);
+      a.appendChild(document.createTextNode(s.dataset.name));
+      li.appendChild(a);
+      toc.appendChild(li);
+    });
+  }
+
+  function buildStates(target) {
+    var bar = document.getElementById('states');
+    bar.innerHTML = '';
+    var list = ['normal'].concat((target.dataset.states || '').split(',').filter(Boolean));
+    list.forEach(function (st) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = STATE_NAMES[st];
+      b.setAttribute('aria-pressed', st === 'normal' ? 'true' : 'false');
+      b.addEventListener('click', function () {
+        target.dataset.state = st;
+        Array.prototype.forEach.call(bar.children, function (c) {
+          c.setAttribute('aria-pressed', c === b ? 'true' : 'false');
+        });
+      });
+      bar.appendChild(b);
+    });
+    bar.hidden = list.length < 2;
+  }
+
+  function show(id) {
+    var target = screens.filter(function (s) { return s.id === id; })[0] || screens[0];
+    screens.forEach(function (s) { s.classList.toggle('on', s === target); });
+    target.dataset.state = 'normal';
+    target.querySelector('.body').scrollTop = 0;
+    FRAME.classList.toggle('wide', target.dataset.frame === 'wide');
+    document.getElementById('cap-id').textContent = target.id;
+    document.getElementById('cap-name').textContent = target.dataset.name;
+    document.getElementById('cap-src').textContent = target.dataset.journey;
+    document.title = 'NoExcuse · ' + target.id + ' · ' + target.dataset.name;
+    Array.prototype.forEach.call(document.querySelectorAll('#toc a'), function (a) {
+      a.setAttribute('aria-current', a.dataset.id === target.id ? 'true' : 'false');
+    });
+    buildStates(target);
+  }
+
+  function notice(text) {
+    document.getElementById('msg').textContent = text;
+  }
+
+  document.getElementById('copy').addEventListener('click', async function () {
+    try {
+      await navigator.clipboard.writeText(document.getElementById('invite-link').value);
+      notice('Ссылка скопирована');
+    } catch (e) {
+      notice('Не удалось скопировать. Выделите ссылку вручную');
+    }
+  });
+
+  document.getElementById('share').addEventListener('click', async function () {
+    if (!navigator.share) {
+      notice('Системное меню «Поделиться» недоступно в этом браузере');
+      return;
+    }
+    try {
+      await navigator.share({ title: 'Приглашение в NoExcuse', url: document.getElementById('invite-link').value });
+    } catch (e) {
+      notice('Отправка отменена или не удалась');
+    }
+  });
+
+  screens.forEach(decorate);
+  buildToc();
+  window.addEventListener('hashchange', function () { show(location.hash.slice(1)); });
+  show(location.hash.slice(1));
+})();
+</script>
+</body>
+</html>

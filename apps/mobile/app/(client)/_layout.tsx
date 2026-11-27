@@ -7,6 +7,8 @@ export default function ClientLayout() {
     <RoleGate role="client">
       <Tabs screenOptions={{ headerShown: false }}>
         <Tabs.Screen name="links" options={{ title: t('tabs.links') }} />
+        <Tabs.Screen name="plan" options={{ title: t('tabs.plan') }} />
+        <Tabs.Screen name="calendar" options={{ title: t('tabs.calendar') }} />
         <Tabs.Screen name="redeem" options={{ title: t('tabs.redeem') }} />
         <Tabs.Screen name="settings" options={{ title: t('tabs.settings') }} />
       </Tabs>

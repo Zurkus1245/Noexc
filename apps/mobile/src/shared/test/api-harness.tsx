@@ -12,6 +12,7 @@ export const CREATED_AT = '2026-11-02T10:00:00.000Z';
 export interface RecordedRequest {
   readonly method: string;
   readonly path: string;
+  readonly query: Readonly<Record<string, string>>;
   readonly body: unknown;
   readonly idempotencyKey: string | undefined;
 }
@@ -29,6 +30,7 @@ export const stubFetch = (handler: (request: RecordedRequest) => StubResponse): 
     const request: RecordedRequest = {
       method: init?.method ?? 'GET',
       path: new URL(input).pathname,
+      query: Object.fromEntries(new URL(input).searchParams),
       body: typeof init?.body === 'string' ? JSON.parse(init.body) : undefined,
       idempotencyKey: headers['Idempotency-Key'],
     };

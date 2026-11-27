@@ -8,7 +8,6 @@ export default function CoachLayout() {
       <Tabs screenOptions={{ headerShown: false }}>
         <Tabs.Screen name="invite" options={{ title: t('tabs.invite') }} />
         <Tabs.Screen name="clients" options={{ title: t('tabs.clients') }} />
-        <Tabs.Screen name="clients/[clientId]" options={{ href: null }} />
         <Tabs.Screen name="settings" options={{ title: t('tabs.settings') }} />
       </Tabs>
     </RoleGate>

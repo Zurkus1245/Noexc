@@ -1,0 +1,963 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NoExcuse · Кабинет клиента · low-fi</title>
+<style>
+:root{--blue:#2563EB;--green:#16A34A;--orange:#EA580C;--red:#DC2626;--bg:#F8FAFC;--surface:#FFFFFF;--text:#0F172A;--muted:#64748B;--border:#E2E8F0;--radius:12px}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--blue:#3B82F6;--green:#4ADE80;--orange:#FB923C;--red:#F87171;--bg:#0B1220;--surface:#111A2B;--text:#F1F5F9;--muted:#94A3B8;--border:#1E293B}}
+:root[data-theme="dark"]{--blue:#3B82F6;--green:#4ADE80;--orange:#FB923C;--red:#F87171;--bg:#0B1220;--surface:#111A2B;--text:#F1F5F9;--muted:#94A3B8;--border:#1E293B}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.4}
+a{color:var(--blue)}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+.proto-head h1{font-size:22px;margin:0 0 6px}
+.proto-head p{margin:0 0 10px}
+.ctrl{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:8px 0 16px}
+.ctrl select{min-height:44px;padding:0 10px;border-radius:10px;border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+
+/* table of contents */
+.toc{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin-bottom:20px}
+.toc section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px}
+.toc h2{font-size:14px;margin:8px 0 2px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.toc ul{list-style:none;margin:0;padding:0}
+.toc a{display:block;min-height:44px;line-height:44px;text-decoration:none;color:var(--text);font-size:14px}
+.toc a b{color:var(--blue);font-weight:600;margin-right:6px}
+
+/* stage */
+.stage{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;align-items:flex-start;padding-bottom:40px}
+.desc{width:340px;max-width:100%;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-size:14px}
+.desc h2{font-size:17px;margin:4px 0 8px}
+
+/* phone frame 390x844 */
+.phone{width:390px;height:844px;box-sizing:content-box;border:10px solid var(--text);border-radius:44px;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;position:relative;flex:none}
+.phone-body{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.topbar{display:flex;align-items:center;gap:6px;min-height:52px;padding:0 8px;border-bottom:1px solid var(--border);background:var(--surface)}
+.back{min-width:44px;min-height:44px;border:0;background:none;color:var(--blue);font:inherit;font-size:16px;font-weight:600;cursor:pointer;padding:0 6px}
+.ttl{flex:1;display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.ttl #ttl-id{font-size:11px;color:var(--muted);font-weight:600}
+.ttl #ttl{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.offline-global{display:none;background:var(--orange);color:#fff;font-size:13px;font-weight:600;padding:8px 16px}
+.tabbar{display:none;border-top:1px solid var(--border);background:var(--surface)}
+.phone.has-tabs .tabbar{display:flex}
+.tabbar a{flex:1;min-height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;color:var(--muted);text-decoration:none;gap:2px}
+.tabbar a i{font-style:normal;font-size:16px;line-height:1}
+.tabbar a.on{color:var(--blue);font-weight:700}
+
+.screen{display:none;padding:16px 16px 24px}
+.screen.active{display:block}
+.screen[hidden]{display:none}
+
+/* state visibility */
+.sv{display:none}
+body[data-state="normal"] .sv-normal,
+body[data-state="loading"] .sv-loading,
+body[data-state="empty"] .sv-empty,
+body[data-state="error"] .sv-error,
+body[data-state="offline"] .sv-offline{display:block}
+body[data-state="offline"] .offline-global{display:block}
+
+/* components */
+.h1{font-size:22px;font-weight:700;margin:6px 0 8px;line-height:1.25}
+.h2{font-size:16px;font-weight:600;margin:16px 0 6px}
+.lead{margin:0 0 12px}
+.btn{display:flex;align-items:center;justify-content:center;min-height:44px;padding:10px 16px;margin:8px 0;border-radius:var(--radius);background:var(--blue);color:#fff;text-decoration:none;font:inherit;font-weight:600;border:1px solid var(--blue);width:100%;text-align:center;cursor:pointer}
+.btn.sec{background:var(--surface);color:var(--blue);border-color:var(--border)}
+.btn.dng{background:var(--surface);color:var(--red);border-color:var(--red)}
+.btn.off,.off{opacity:.45;pointer-events:none}
+.mini{min-height:44px;min-width:44px;padding:0 12px;border-radius:10px;border:1px solid var(--blue);background:var(--surface);color:var(--blue);font:inherit;font-weight:600;cursor:pointer}
+.link{display:inline-flex;align-items:center;min-height:44px;color:var(--blue);text-decoration:none;font-weight:600}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin:10px 0}
+.card h3{margin:0 0 4px;font-size:16px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:52px;padding:6px 0;border-bottom:1px solid var(--border);color:var(--text);text-decoration:none}
+a.row::after{content:"\203A";color:var(--muted);font-size:22px;line-height:1}
+.row:last-child{border-bottom:0}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid;white-space:nowrap}
+.b-ok{color:var(--green);border-color:var(--green)}
+.b-warn{color:var(--orange);border-color:var(--orange)}
+.b-bad{color:var(--red);border-color:var(--red)}
+.b-pause{color:var(--muted);border-color:var(--muted)}
+.note{background:color-mix(in srgb,var(--blue) 10%,var(--surface));border-radius:var(--radius);padding:12px;font-size:14px;margin:10px 0}
+.warn{background:color-mix(in srgb,var(--orange) 12%,var(--surface));border-radius:var(--radius);padding:12px;font-size:14px;margin:10px 0}
+.err{background:color-mix(in srgb,var(--red) 10%,var(--surface));border-radius:var(--radius);padding:12px;font-size:14px;margin:10px 0;color:var(--text)}
+.err[hidden],.hint[hidden]{display:none}
+.hint{color:var(--red);font-weight:600;font-size:14px;margin:6px 0}
+.lbl{display:block;font-size:13px;color:var(--muted);margin:12px 0 4px}
+.input{width:100%;min-height:44px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;font:inherit;background:var(--surface);color:var(--text)}
+textarea.input{min-height:80px;resize:none}
+.chk{display:flex;gap:12px;align-items:flex-start;min-height:44px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.chk:last-child{border-bottom:0}
+.chk input{width:22px;height:22px;margin:2px 0 0;flex:none;accent-color:var(--blue)}
+.chk span small{display:block;color:var(--muted);font-size:13px}
+.sw{width:46px;height:28px;border-radius:999px;background:var(--border);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff}
+.sw.on{background:var(--green)}
+.sw.on::after{left:21px}
+.check{width:72px;height:72px;border-radius:50%;border:3px solid var(--green);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:700;margin:24px auto 12px}
+.code{font-size:30px;font-weight:700;letter-spacing:6px;text-align:center;padding:16px;border:2px dashed var(--border);border-radius:var(--radius);background:var(--surface);margin:12px 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;margin:10px 0}
+.days a{min-height:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;color:var(--text);text-decoration:none;font-size:13px}
+.days a.today{background:var(--blue);color:#fff;font-weight:700}
+.days a.dis{color:var(--muted);opacity:.5;pointer-events:none}
+.seg{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:3px;margin:8px 0}
+.seg a{flex:1;min-height:44px;line-height:38px;text-align:center;text-decoration:none;color:var(--muted);border-radius:9px;font-weight:600}
+.seg a.on{background:var(--blue);color:#fff}
+.setrow{display:grid;grid-template-columns:28px 1fr 1fr auto;gap:8px;align-items:center;min-height:52px;padding:4px 0;border-bottom:1px solid var(--border)}
+.setrow .input{padding:8px;text-align:center}
+.timer{font-size:56px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;margin:28px 0 8px}
+.bar{height:8px;background:var(--border);border-radius:999px;overflow:hidden;margin:8px 0}
+.bar i{display:block;height:100%;width:62%;background:var(--blue)}
+.sk{height:14px;background:var(--border);border-radius:6px;margin:12px 0;animation:pulse 1.2s ease-in-out infinite}
+.sk.w60{width:60%}
+.sk.big{height:84px;border-radius:var(--radius)}
+@keyframes pulse{50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.sk{animation:none}}
+.rid{font-size:12px;color:var(--muted);font-family:ui-monospace,Consolas,monospace}
+.ph{height:120px;border:1px dashed var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;margin:8px 0}
+details.help{margin:8px 0}
+details.help summary{min-height:44px;line-height:44px;cursor:pointer;color:var(--blue);font-weight:600}
+details.help p{margin:0 0 8px;font-size:14px}
+
+/* mobile: full screen */
+@media (max-width:480px){
+  .phone{width:100%;height:100vh;height:100dvh;border:0;border-radius:0}
+  .stage{padding:0;gap:0}
+  .desc,.toc,.proto-head{display:none}
+  .wrap{padding:0}
+  .ctrl{display:none}
+  body{background:var(--bg)}
+}
+</style>
+</head>
+<body data-state="normal">
+<div class="wrap">
+
+<header class="proto-head">
+  <h1>NoExcuse · Кабинет клиента · low-fi прототип</h1>
+  <p class="muted">Экраны по карте SCR-S / SCR-C (docs/requirements/20-screen-map.md) и сценариям JRN-02, 04, 06, 08–12, 14, 15. Переходы — нажатием на элементы, «Назад» — в топ-баре. Все данные вымышленные. Пустые и медленные состояния переключаются ниже.</p>
+  <div class="ctrl">
+    <label for="state">Состояние экранов с данными (C07, C15, C17, C23, C30):</label>
+    <select id="state">
+      <option value="normal">обычное</option>
+      <option value="loading">загрузка</option>
+      <option value="empty">пусто</option>
+      <option value="error">ошибка</option>
+      <option value="offline">офлайн</option>
+    </select>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Оглавление экранов">
+  <section>
+    <h2>Запуск и вход</h2>
+    <ul>
+      <li><a href="#SCR-S01"><b>SCR-S01</b>Сплэш</a></li>
+      <li><a href="#SCR-S02"><b>SCR-S02</b>Выбор пути</a></li>
+      <li><a href="#SCR-C04"><b>SCR-C04</b>Тренер ещё не назначен (без инвайта)</a></li>
+      <li><a href="#SCR-C02"><b>SCR-C02</b>Введите код тренера</a></li>
+      <li><a href="#SCR-C01"><b>SCR-C01</b>Ссылка-приглашение</a></li>
+      <li><a href="#SCR-C03"><b>SCR-C03</b>Код недействителен</a></li>
+      <li><a href="#SCR-S06"><b>SCR-S06</b>Возраст 18+</a></li>
+      <li><a href="#SCR-S21"><b>SCR-S21</b>Младше 18</a></li>
+      <li><a href="#SCR-S03"><b>SCR-S03</b>Вход</a></li>
+      <li><a href="#SCR-S05"><b>SCR-S05</b>Профиль (имя, часовой пояс)</a></li>
+    </ul>
+  </section>
+  <section>
+    <h2>Связь и согласия</h2>
+    <ul>
+      <li><a href="#SCR-C05"><b>SCR-C05</b>Подтверждение связи</a></li>
+      <li><a href="#SCR-S07"><b>SCR-S07</b>Согласия (раздельные)</a></li>
+      <li><a href="#SCR-S08"><b>SCR-S08</b>Отказ от согласий</a></li>
+      <li><a href="#SCR-S09"><b>SCR-S09</b>Повторный запрос согласия</a></li>
+      <li><a href="#SCR-C06"><b>SCR-C06</b>Связь создана</a></li>
+    </ul>
+  </section>
+  <section>
+    <h2>Сегодня и тренировка</h2>
+    <ul>
+      <li><a href="#SCR-C07"><b>SCR-C07</b>Сегодня (тренировка / пусто)</a></li>
+      <li><a href="#SCR-C11"><b>SCR-C11</b>Выполнение тренировки</a></li>
+      <li><a href="#SCR-C11-NS"><b>SCR-C11</b>Подход «Не отправлено»</a></li>
+      <li><a href="#SCR-C12"><b>SCR-C12</b>Таймер отдыха</a></li>
+      <li><a href="#SCR-C11-DONE"><b>SCR-C11</b>Итог тренировки</a></li>
+    </ul>
+  </section>
+  <section>
+    <h2>Календарь и перенос</h2>
+    <ul>
+      <li><a href="#SCR-C15"><b>SCR-C15</b>Календарь</a></li>
+      <li><a href="#SCR-C14"><b>SCR-C14</b>Перенос тренировки</a></li>
+      <li><a href="#SCR-C26"><b>SCR-C26</b>Запрос паузы</a></li>
+    </ul>
+  </section>
+  <section>
+    <h2>Питание и прогресс</h2>
+    <ul>
+      <li><a href="#SCR-C17"><b>SCR-C17</b>Питание на день</a></li>
+      <li><a href="#SCR-C18"><b>SCR-C18</b>Ручной ввод за день</a></li>
+      <li><a href="#SCR-C20"><b>SCR-C20</b>Ниже порога ккал</a></li>
+      <li><a href="#SCR-C23"><b>SCR-C23</b>Прогресс: вес и замеры</a></li>
+      <li><a href="#SCR-C22"><b>SCR-C22</b>Ввод веса и замеров</a></li>
+    </ul>
+  </section>
+  <section>
+    <h2>Профиль и связь</h2>
+    <ul>
+      <li><a href="#SCR-C29"><b>SCR-C29</b>Профиль</a></li>
+      <li><a href="#SCR-C30"><b>SCR-C30</b>Связь с тренером</a></li>
+      <li><a href="#SCR-C31"><b>SCR-C31</b>Отвязка</a></li>
+      <li><a href="#SCR-C25"><b>SCR-C25</b>Связь завершена</a></li>
+      <li><a href="#SCR-S07-R"><b>SCR-S07</b>Отзыв доступа тренера</a></li>
+      <li><a href="#SCR-S11"><b>SCR-S11</b>Уведомления</a></li>
+      <li><a href="#SCR-S13"><b>SCR-S13</b>Экспорт данных</a></li>
+      <li><a href="#SCR-S14"><b>SCR-S14</b>Удаление аккаунта</a></li>
+      <li><a href="#SCR-S15"><b>SCR-S15</b>Документы</a></li>
+      <li><a href="#SCR-C21"><b>SCR-C21</b>Дисклеймер «не медицинская рекомендация»</a></li>
+    </ul>
+  </section>
+  <section>
+    <h2>Ошибки и состояния</h2>
+    <ul>
+      <li><a href="#SCR-S17"><b>SCR-S17</b>Нет сети</a></li>
+      <li><a href="#SCR-S18"><b>SCR-S18</b>Ошибка сервера</a></li>
+      <li><a href="#SCR-S19"><b>SCR-S19</b>Сессия истекла</a></li>
+      <li><a href="#SCR-S16"><b>SCR-S16</b>Не найдено или недоступно</a></li>
+    </ul>
+  </section>
+</nav>
+
+<main class="stage">
+  <div class="phone" id="phone">
+    <div class="offline-global" role="status">Нет соединения. Данные могут быть устаревшими</div>
+    <header class="topbar">
+      <button class="back" type="button" onclick="goBack()" aria-label="Назад">‹ Назад</button>
+      <div class="ttl"><span id="ttl-id"></span><span id="ttl"></span></div>
+    </header>
+
+    <div class="phone-body">
+
+      <!-- ============ ЗАПУСК И ВХОД ============ -->
+
+      <section class="screen" id="SCR-S01" data-id="SCR-S01" data-title="Сплэш" data-desc="Холодный старт: проверка токена, версии и роли. Без токена переход на выбор пути.">
+        <div style="height:520px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+          <div class="check" style="border-color:var(--blue);color:var(--blue)">N</div>
+          <div class="h1">NoExcuse</div>
+          <p class="muted small">Загрузка…</p>
+        </div>
+        <a class="btn sec" href="#SCR-S02">Продолжить</a>
+      </section>
+
+      <section class="screen" id="SCR-S02" data-id="SCR-S02" data-title="Выбор пути" data-desc="Развилка до входа: тренер или клиент. Роль клиента фиксируется здесь, с кодом тренера.">
+        <div class="h1">Как вы будете пользоваться NoExcuse?</div>
+        <p class="lead muted">Выберите вариант. Роль нельзя поменять позже.</p>
+        <a class="btn" href="#SCR-C02">У меня есть код тренера</a>
+        <a class="btn sec" href="#SCR-C04">Я пока без кода</a>
+        <a class="btn sec" href="#SCR-S03">Уже есть аккаунт</a>
+        <a class="btn sec" href="#SCR-S03">Я тренер</a>
+      </section>
+
+      <section class="screen" id="SCR-C04" data-id="SCR-C04" data-title="Тренер ещё не назначен" data-desc="Запуск без инвайта. Ничего не запрашивает и не показывает чужих данных. Ведёт к вводу кода." data-tab="">
+        <div class="ph">иллюстрация (заглушка)</div>
+        <div class="h1">Тренер ещё не назначил вам план</div>
+        <p class="lead">Введите код, когда получите его от тренера. Ссылка из мессенджера тоже подойдёт.</p>
+        <a class="btn" href="#SCR-C02">Введите код тренера</a>
+        <details class="help">
+          <summary>Как получить код</summary>
+          <p>Попросите тренера создать приглашение в приложении. Код одноразовый и действует ограниченное время.</p>
+        </details>
+        <div class="card">
+          <div class="small muted">Пока вы без тренера, тренировки, питание и замеры недоступны.</div>
+        </div>
+        <a class="link" href="#SCR-C29">Настройки</a>
+      </section>
+
+      <section class="screen" id="SCR-C02" data-id="SCR-C02" data-title="Введите код тренера" data-desc="Ручной ввод кода (26 символов, маска). Неверный код ведёт на единый экран C03.">
+        <div class="h1">Введите код тренера</div>
+        <p class="lead muted">Код из 26 символов. Пробелы и дефисы вводить не нужно.</p>
+        <label class="lbl" for="code-in">Код</label>
+        <input id="code-in" class="input" maxlength="26" placeholder="XXXX XXXX XXXX XXXX XXXX XXXX XX" autocomplete="off">
+        <a class="btn" href="#SCR-S03">Продолжить</a>
+        <a class="link" href="#SCR-C03">Показать ответ на неверный код</a>
+      </section>
+
+      <section class="screen" id="SCR-C01" data-id="SCR-C01" data-title="Ссылка-приглашение" data-desc="Открыто по ссылке. Код берётся из фрагмента ссылки и на экране не показывается целиком.">
+        <div class="h1">Вас пригласили в NoExcuse</div>
+        <p class="lead">Тренер добавит вас в свой список клиентов. Связь подтвердите после входа.</p>
+        <div class="card">
+          <span class="lbl" style="margin-top:0">Код из ссылки</span>
+          <div class="code">••••-••••-••••</div>
+        </div>
+        <a class="btn" href="#SCR-S03">Продолжить</a>
+        <a class="btn sec" href="#SCR-C02">Ввести код вручную</a>
+      </section>
+
+      <section class="screen" id="SCR-C03" data-id="SCR-C03" data-title="Код недействителен" data-desc="Один нейтральный текст для истёкшего, использованного, отозванного и неверного кода. Причину не раскрываем.">
+        <div class="h1">Код не подошёл</div>
+        <div class="err" role="alert">
+          <strong>Код недействителен.</strong><br>
+          Попросите тренера выслать новый.
+        </div>
+        <a class="btn" href="#SCR-C02">Ввести другой код</a>
+        <div class="note">Попросите тренера выслать новый код. Приложение ничего не отправляет.</div>
+        <a class="link" href="#SCR-S02">Назад к выбору</a>
+      </section>
+
+      <section class="screen" id="SCR-S06" data-id="SCR-S06" data-title="Возраст 18+" data-desc="Самодекларация 18+ до любых согласий. Без отметки продолжить нельзя.">
+        <div class="h1">Вам есть 18 лет?</div>
+        <p class="lead muted">NoExcuse доступен только совершеннолетним. Дату рождения мы не запрашиваем.</p>
+        <label class="chk"><input type="checkbox" id="g-age"><span>Мне есть 18 лет</span></label>
+        <p class="hint" hidden>Отметьте пункт, чтобы продолжить.</p>
+        <a class="btn" href="#SCR-S05" data-gate="g-age">Продолжить</a>
+        <a class="btn sec" href="#SCR-S21">Нет</a>
+      </section>
+
+      <section class="screen" id="SCR-S21" data-id="SCR-S21" data-title="Младше 18" data-desc="Регистрация не продолжается. Данные не собираются.">
+        <div class="h1">NoExcuse только для 18+</div>
+        <p class="lead">Регистрация не продолжается. Данные не сохраняются.</p>
+        <a class="btn sec" href="#SCR-S02">Назад</a>
+      </section>
+
+      <section class="screen" id="SCR-S03" data-id="SCR-S03" data-title="Вход" data-desc="Вход через внешний провайдер (Sign in with Apple обязателен при любом социальном входе).">
+        <div class="h1">Войдите в аккаунт</div>
+        <p class="lead muted">Вход нужен, чтобы сохранять тренировки и согласия.</p>
+        <a class="btn" href="#SCR-S06">Продолжить с Apple</a>
+        <a class="btn sec" href="#SCR-S06">Продолжить с Google</a>
+        <a class="btn sec" href="#SCR-S06">Войти по почте</a>
+        <p class="small muted">Вход не удался? Попробуйте ещё раз или выберите другой способ.</p>
+      </section>
+
+      <section class="screen" id="SCR-S05" data-id="SCR-S05" data-title="Профиль" data-desc="Создание профиля один раз. Часовой пояс определён по устройству. Роль уже выбрана на экране выбора пути.">
+        <div class="h1">Как к вам обращаться?</div>
+        <label class="lbl" for="name-in">Имя</label>
+        <input id="name-in" class="input" maxlength="80" placeholder="Например, Мария">
+        <label class="lbl" for="tz-in">Часовой пояс</label>
+        <select id="tz-in" class="input"><option>Europe/Berlin (по устройству)</option><option>Europe/Lisbon</option></select>
+        <div class="note">Роль: клиент. Её нельзя поменять позже.</div>
+        <a class="btn" href="#SCR-C05">Продолжить</a>
+      </section>
+
+      <section class="screen" id="SCR-C05" data-id="SCR-C05" data-title="Подтверждение связи" data-desc="Имя тренера показывается только здесь. Перечислено, что именно увидит тренер.">
+        <div class="h1">Тренер Анна хочет вести вас в NoExcuse</div>
+        <div class="card">
+          <h3>Что увидит тренер</h3>
+          <div class="row"><span>Цель и план тренировок</span><span class="badge b-ok">✓ Да</span></div>
+          <div class="row"><span>Выполнение тренировок</span><span class="badge b-ok">✓ Да</span></div>
+          <div class="row"><span>Питание</span><span class="badge b-pause">‖ Только если разрешите</span></div>
+          <div class="row"><span>Вес и замеры</span><span class="badge b-pause">‖ Только если разрешите</span></div>
+        </div>
+        <a class="btn" href="#SCR-S07">Продолжить</a>
+        <a class="btn sec" href="#SCR-C02">Назад</a>
+      </section>
+
+      <section class="screen" id="SCR-S07" data-id="SCR-S07" data-title="Согласия" data-desc="Раздельные версионные согласия. Обязательные не предотмечены. Отказ ведёт на S08.">
+        <div class="h1">Ваши согласия</div>
+        <p class="lead small muted">Каждое согласие отдельное. Ничего не отмечено заранее. Пункты со звёздочкой обязательны.</p>
+        <label class="chk"><input type="checkbox" id="g-tos"><span>Условия использования *<small><a href="#SCR-S15">Открыть текст</a></small></span></label>
+        <label class="chk"><input type="checkbox" id="g-health"><span>Данные о здоровье (ст. 9 GDPR) *<small>Нужны для тренировок и замеров. <a href="#SCR-S15">Открыть текст</a></small></span></label>
+        <label class="chk"><input type="checkbox" id="g-coach"><span>Передача данных тренеру *<small>Тренировки и выполнение. <a href="#SCR-S15">Открыть текст</a></small></span></label>
+        <label class="chk"><input type="checkbox" id="g-nut"><span>Тренер видит питание<small>Необязательно, выключено по умолчанию</small></span></label>
+        <label class="chk"><input type="checkbox" id="g-meas"><span>Тренер видит вес и замеры<small>Необязательно, выключено по умолчанию</small></span></label>
+        <label class="chk"><input type="checkbox" id="g-mkt"><span>Маркетинг<small>Выключено по умолчанию</small></span></label>
+        <p class="hint" hidden>Отметьте обязательные пункты, чтобы продолжить.</p>
+        <a class="btn" href="#SCR-C06" data-gate="g-tos,g-health,g-coach">Подтвердить и продолжить</a>
+        <a class="btn sec" href="#SCR-S08">Не соглашаюсь</a>
+      </section>
+
+      <section class="screen" id="SCR-S08" data-id="SCR-S08" data-title="Без согласий" data-desc="Что будет дальше после отказа: связь не создаётся, аккаунт сохраняется. Без давления.">
+        <div class="h1">Связь пока не создана</div>
+        <p class="lead">Без обязательных согласий тренер не увидит ваши данные, и связь не подключится.</p>
+        <div class="note">Аккаунт сохраняется. Вы можете вернуться к согласиям позже.</div>
+        <a class="btn" href="#SCR-S07">Вернуться к согласиям</a>
+        <a class="btn sec" href="#SCR-C04">Пока не подключаться</a>
+        <a class="btn dng" href="#SCR-S14">Удалить аккаунт</a>
+      </section>
+
+      <section class="screen" id="SCR-S09" data-id="SCR-S09" data-title="Обновились условия" data-desc="Версия согласия изменилась. Доступ тренера к данным закрыт до принятия.">
+        <div class="h1">Обновились условия</div>
+        <p class="lead">Нужно подтвердить новую версию, чтобы продолжить.</p>
+        <div class="card">
+          <div class="row"><span>Условия использования: версия 2 (было 1)</span></div>
+          <a class="link" href="#SCR-S15">Что изменилось</a>
+        </div>
+        <div class="warn">Пока не приняли, тренер не видит ваши данные. Аккаунт не закрывается.</div>
+        <a class="btn" href="#SCR-C07">Принять и продолжить</a>
+        <a class="btn sec" href="#SCR-S08">Отказаться</a>
+      </section>
+
+      <section class="screen" id="SCR-C06" data-id="SCR-C06" data-title="Связь создана" data-desc="Связь подтверждена после ответа сервера. Переход к Сегодня.">
+        <div class="check">✓</div>
+        <div class="h1" style="text-align:center">Вы подключены к тренеру Анна</div>
+        <p class="lead muted" style="text-align:center">Тренер увидит ваши данные по выбранным согласиям.</p>
+        <a class="btn" href="#SCR-C07">Перейти к плану</a>
+      </section>
+
+      <!-- ============ СЕГОДНЯ И ТРЕНИРОВКА ============ -->
+
+      <section class="screen" id="SCR-C07" data-id="SCR-C07" data-title="Сегодня" data-tab="SCR-C07" data-desc="Вкладка Сегодня. Есть тренировка, пусто (тренер не назначил) или состояния загрузки, ошибки и офлайн.">
+        <div class="h1">Сегодня</div>
+        <p class="muted small" style="margin:0 0 6px">Понедельник, 23 ноября</p>
+
+        <div class="sv sv-normal">
+          <div class="card">
+            <div class="row" style="padding:0;border:0"><h3>День А · Ноги</h3><span class="badge b-ok">✓ В плане</span></div>
+            <p class="muted small" style="margin:4px 0 8px">5 упражнений · около 45 мин</p>
+            <a class="btn" href="#SCR-C11">Начать</a>
+            <a class="link" href="#SCR-C14">Перенести</a>
+          </div>
+          <a class="card row" href="#SCR-C17" style="border-bottom:1px solid var(--border)"><span><strong>Цель на день</strong><br><span class="small muted">2100 ккал · Б 150 · Ж 70 · У 200</span></span></a>
+        </div>
+
+        <div class="sv sv-empty">
+          <div class="card">
+            <h3>Тренер ещё не назначил тренировку</h3>
+            <p class="muted small">Как только тренер назначит, она появится здесь. Ничего делать не нужно.</p>
+            <a class="link" href="#SCR-C15">Открыть календарь</a>
+          </div>
+          <a class="link" href="#SCR-C29">Профиль</a>
+        </div>
+
+        <div class="sv sv-loading" aria-busy="true">
+          <p class="small muted">Загружаем тренировку…</p>
+          <div class="sk big"></div>
+          <div class="sk"></div>
+          <div class="sk w60"></div>
+        </div>
+
+        <div class="sv sv-error">
+          <div class="err" role="alert"><strong>Не удалось загрузить.</strong><br>Попробуйте ещё раз.<br><span class="rid">requestId: 7f3a92c1</span></div>
+          <a class="btn" href="#SCR-C07">Повторить</a>
+          <a class="link" href="#SCR-S18">Подробнее</a>
+        </div>
+
+        <div class="sv sv-offline">
+          <div class="warn">Нет соединения. Данные могут быть устаревшими. Отметки без сети не сохраняются.</div>
+          <div class="card">
+            <h3>День А · Ноги</h3>
+            <p class="muted small">Сохранённая версия. Начать тренировку можно после подключения.</p>
+            <span class="btn off">Начать</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="SCR-C11" data-id="SCR-C11" data-title="Выполнение" data-desc="Подходы: факт повторов и веса. Подход считается сохранённым только после ответа сервера. Таймер — ссылкой.">
+        <div class="h1">День А · Ноги</div>
+        <p class="small muted">Выполнено 2 из 8 подходов</p>
+        <div class="bar"><i></i></div>
+
+        <div class="card">
+          <h3>Приседания</h3>
+          <p class="small muted" style="margin:0 0 6px">План: 4 × 8, вес 60 кг, отдых 90 с</p>
+          <div class="setrow"><span>1</span><input class="input" value="8" aria-label="Повторы"><input class="input" value="60" aria-label="Вес, кг"><span class="badge b-ok">✓ Сохранено</span></div>
+          <div class="setrow"><span>2</span><input class="input" value="8" aria-label="Повторы"><input class="input" value="60" aria-label="Вес, кг"><span class="badge b-ok">✓ Сохранено</span></div>
+          <div class="setrow"><span>3</span><input class="input" placeholder="повт." aria-label="Повторы"><input class="input" placeholder="кг" aria-label="Вес, кг"><button class="mini" type="button">Отметить</button></div>
+        </div>
+
+        <div class="card">
+          <h3>Жим лёжа</h3>
+          <p class="small muted" style="margin:0 0 6px">План: 3 × 10, отдых 120 с</p>
+          <div class="setrow"><span>1</span><input class="input" placeholder="повт." aria-label="Повторы"><input class="input" placeholder="кг" aria-label="Вес, кг"><button class="mini" type="button">Отметить</button></div>
+        </div>
+
+        <a class="btn sec" href="#SCR-C12">Таймер отдыха</a>
+        <p class="small muted">Подход «Не отправлено» показан отдельно: <a href="#SCR-C11-NS">вариант с ошибкой</a>.</p>
+        <a class="btn" href="#SCR-C11-DONE">Завершить тренировку</a>
+      </section>
+
+      <section class="screen" id="SCR-C11-NS" data-id="SCR-C11" data-title="Подход: не отправлено" data-desc="Состояние «Не отправлено»: нет связи, подход не помечен сохранённым. Повтор с тем же ключом безопасен.">
+        <div class="h1">День А · Ноги</div>
+        <p class="small muted">Выполнено 2 из 8 подходов</p>
+        <div class="card">
+          <h3>Жим лёжа</h3>
+          <div class="setrow"><span>1</span><input class="input" value="10" aria-label="Повторы"><input class="input" value="50" aria-label="Вес, кг"><span class="badge b-warn">! Не отправлено</span></div>
+          <p class="small" style="margin:8px 0 0">Нет связи с сервером. Подход сохранён на этом устройстве и не считается выполненным, пока сервер его не подтвердит.</p>
+          <button class="btn" type="button">Повторить отправку</button>
+          <button class="btn sec" type="button">Удалить запись</button>
+        </div>
+        <a class="link" href="#SCR-C11">Назад к тренировке</a>
+      </section>
+
+      <section class="screen" id="SCR-C12" data-id="SCR-C12" data-title="Таймер отдыха" data-desc="Локальный таймер отдыха. Сервер не участвует. Пропуск возвращает к подходам.">
+        <div class="h1">Отдых</div>
+        <p class="muted" style="text-align:center;margin:0">До следующего подхода</p>
+        <div class="timer" aria-live="off">01:24</div>
+        <div class="bar"><i style="width:94%"></i></div>
+        <div class="grid2">
+          <button class="btn sec" type="button" style="margin-top:20px">+30 с</button>
+          <a class="btn" href="#SCR-C11" style="margin-top:20px">Пропустить</a>
+        </div>
+        <p class="small muted" style="text-align:center;margin-top:16px">Таймер работает на этом устройстве.</p>
+      </section>
+
+      <section class="screen" id="SCR-C11-DONE" data-id="SCR-C11" data-title="Итог тренировки" data-desc="Итог и подтверждение завершения. Если есть невыполненные подходы, сначала спрашиваем.">
+        <div class="h1">Тренировка завершена?</div>
+        <div class="card">
+          <div class="row" style="border:0"><span>Выполнено подходов</span><strong>14 из 15</strong></div>
+          <div class="row" style="border:0"><span>Статус</span><span class="badge b-pause">‖ Частично</span></div>
+        </div>
+        <div class="warn">Осталось 1 подход. Завершить как частично выполненную?</div>
+        <a class="btn" href="#SCR-C07">Готово</a>
+        <a class="btn sec" href="#SCR-C11">Вернуться к подходам</a>
+      </section>
+
+      <!-- ============ КАЛЕНДАРЬ И ПЕРЕНОС ============ -->
+
+      <section class="screen" id="SCR-C15" data-id="SCR-C15" data-title="Календарь" data-tab="SCR-C15" data-desc="Календарь клиента: неделя, переход к дню, перенос и запрос паузы. Есть состояния загрузки, пусто, ошибки и офлайн.">
+        <div class="h1">Календарь</div>
+        <div class="seg"><a class="on" href="#SCR-C15">Неделя</a><a href="#SCR-C15">Месяц</a></div>
+        <div class="days">
+          <a href="#SCR-C07">Пн<strong>23</strong></a>
+          <a href="#SCR-C07">Вт<strong>24</strong></a>
+          <a class="today" href="#SCR-C07">Ср<strong>25</strong></a>
+          <a href="#SCR-C07">Чт<strong>26</strong></a>
+          <a href="#SCR-C07">Пт<strong>27</strong></a>
+          <a href="#SCR-C07">Сб<strong>28</strong></a>
+          <a href="#SCR-C07">Вс<strong>29</strong></a>
+        </div>
+
+        <div class="sv sv-normal">
+          <a class="card row" href="#SCR-C07"><span><strong>Пн 23 · День А</strong><br><span class="small muted">5 упражнений</span></span><span class="badge b-ok">✓ Выполнено</span></a>
+          <a class="card row" href="#SCR-C11"><span><strong>Ср 25 · День Б</strong><br><span class="small muted">Запланировано</span></span><span class="badge b-ok">✓ В плане</span></a>
+          <div class="grid2" style="margin-top:8px">
+            <a class="btn sec" href="#SCR-C14">Перенести</a>
+            <a class="btn sec" href="#SCR-C26">Запросить паузу</a>
+          </div>
+        </div>
+
+        <div class="sv sv-empty">
+          <div class="card">
+            <h3>На этой неделе тренировок нет</h3>
+            <p class="muted small">Тренер назначит их, когда будет готов.</p>
+          </div>
+        </div>
+
+        <div class="sv sv-loading" aria-busy="true">
+          <div class="sk"></div><div class="sk"></div><div class="sk big"></div><div class="sk w60"></div>
+        </div>
+
+        <div class="sv sv-error">
+          <div class="err" role="alert"><strong>Не удалось загрузить календарь.</strong><br><span class="rid">requestId: 2b91e0aa</span></div>
+          <a class="btn" href="#SCR-C15">Повторить</a>
+        </div>
+
+        <div class="sv sv-offline">
+          <div class="warn">Нет соединения. Показаны последние данные, только для просмотра.</div>
+          <a class="card row" href="#SCR-C07"><span><strong>Пн 23 · День А</strong><br><span class="small muted">Нет связи</span></span><span class="badge b-pause">‖ Только просмотр</span></a>
+        </div>
+      </section>
+
+      <section class="screen" id="SCR-C14" data-id="SCR-C14" data-title="Перенос тренировки" data-desc="Перенос клиентом в пределах правил тренера (окно и лимит). Вне правил — запрос тренеру.">
+        <div class="h1">Перенести тренировку</div>
+        <p class="lead">День А · сейчас пт 27 ноября. Выберите новую дату.</p>
+        <div class="days">
+          <a class="dis" href="#SCR-C14">Пт<strong>27</strong></a>
+          <a href="#SCR-C14">Сб<strong>28</strong></a>
+          <a href="#SCR-C14">Вс<strong>29</strong></a>
+          <a class="today" href="#SCR-C14">Пн<strong>30</strong></a>
+          <a href="#SCR-C14">Вт<strong>1</strong></a>
+          <a class="dis" href="#SCR-C14">Ср<strong>2</strong></a>
+          <a class="dis" href="#SCR-C14">Чт<strong>3</strong></a>
+        </div>
+        <div class="note">Правила тренера: окно 7 дней, до 2 переносов в неделю. Прошедшие даты недоступны.</div>
+        <a class="btn" href="#SCR-C07">Перенести</a>
+        <a class="btn sec" href="#SCR-C07">Отмена</a>
+        <div class="warn" style="margin-top:12px">Дата вне правил: перенос отправится тренеру на согласование.</div>
+      </section>
+
+      <section class="screen" id="SCR-C26" data-id="SCR-C26" data-title="Запрос паузы" data-desc="Клиент просит паузу. Тренер подтверждает. Пауза не закрывает доступ к данным.">
+        <div class="h1">Попросить паузу</div>
+        <p class="lead small muted">Тренер подтвердит запрос. Напоминания на время паузы выключаются.</p>
+        <label class="lbl" for="pr">Причина</label>
+        <select id="pr" class="input"><option>Болезнь</option><option>Отпуск</option><option>Другое</option></select>
+        <div class="grid2">
+          <div><label class="lbl" for="d1">С</label><input id="d1" class="input" placeholder="дд.мм"></div>
+          <div><label class="lbl" for="d2">По</label><input id="d2" class="input" placeholder="дд.мм"></div>
+        </div>
+        <label class="lbl" for="cm">Комментарий (необязательно)</label>
+        <textarea id="cm" class="input" maxlength="300"></textarea>
+        <div class="warn" style="margin-top:12px">При боли остановитесь и обратитесь к врачу.</div>
+        <a class="btn" href="#SCR-C30">Отправить запрос</a>
+        <a class="btn sec" href="#SCR-C30">Отмена</a>
+      </section>
+
+      <!-- ============ ПИТАНИЕ ============ -->
+
+      <section class="screen" id="SCR-C17" data-id="SCR-C17" data-title="Питание" data-tab="SCR-C17" data-desc="План КБЖУ на день и ручной ввод итогов. Ниже порога — спокойное предупреждение без блокировки.">
+        <div class="h1">Питание</div>
+
+        <div class="sv sv-normal">
+          <div class="card">
+            <h3>Цель на день</h3>
+            <p class="small muted" style="margin:4px 0 8px">2100 ккал · Б 150 · Ж 70 · У 200</p>
+            <p class="small" style="margin:0">Рекомендации тренера: три приёма пищи, вода по ощущениям.</p>
+            <a class="link" href="#SCR-C21">Подробнее</a>
+          </div>
+          <div class="card">
+            <h3>Итог за сегодня</h3>
+            <div class="row"><span>Ккал</span><strong>1200</strong></div>
+            <div class="row"><span>Б / Ж / У, г</span><strong>90 / 40 / 120</strong></div>
+            <a class="btn sec" href="#SCR-C18">Добавить вручную</a>
+          </div>
+          <div class="warn">
+            <strong>! Итог ниже рекомендованного минимума.</strong><br>
+            Это не медицинская рекомендация. <a href="#SCR-C20">Подробнее</a>
+          </div>
+        </div>
+
+        <div class="sv sv-empty">
+          <div class="card">
+            <h3>План питания не назначен</h3>
+            <p class="muted small">Тренер ещё не задал цель. Итоги можно вести вручную.</p>
+            <a class="btn sec" href="#SCR-C18">Добавить вручную</a>
+          </div>
+        </div>
+
+        <div class="sv sv-loading" aria-busy="true">
+          <div class="sk big"></div><div class="sk"></div><div class="sk w60"></div>
+        </div>
+
+        <div class="sv sv-error">
+          <div class="err" role="alert"><strong>Не удалось загрузить питание.</strong><br><span class="rid">requestId: c04d7e12</span></div>
+          <a class="btn" href="#SCR-C17">Повторить</a>
+        </div>
+
+        <div class="sv sv-offline">
+          <div class="warn">Нет соединения. Итоги не сохранятся, пока нет связи.</div>
+          <div class="card"><h3>Цель на день</h3><p class="small muted">Последняя загруженная версия.</p></div>
+          <span class="btn off">Добавить вручную</span>
+        </div>
+      </section>
+
+      <section class="screen" id="SCR-C18" data-id="SCR-C18" data-title="Ручной ввод за день" data-desc="Ручной ввод ккал и Б/Ж/У за день. Без базы продуктов в MVP.">
+        <div class="h1">Итоги за день</div>
+        <p class="lead small muted">Можно заполнить не все поля.</p>
+        <div class="grid2">
+          <div><label class="lbl" for="kc">Ккал</label><input id="kc" class="input" inputmode="numeric" placeholder="0"></div>
+          <div><label class="lbl" for="pb">Белки, г</label><input id="pb" class="input" inputmode="numeric" placeholder="0"></div>
+          <div><label class="lbl" for="fb">Жиры, г</label><input id="fb" class="input" inputmode="numeric" placeholder="0"></div>
+          <div><label class="lbl" for="cb">Углеводы, г</label><input id="cb" class="input" inputmode="numeric" placeholder="0"></div>
+        </div>
+        <a class="btn" href="#SCR-C17">Сохранить</a>
+        <a class="btn sec" href="#SCR-C17">Отмена</a>
+        <p class="small muted">Если значение ниже минимума, покажем спокойное предупреждение: <a href="#SCR-C20">пример</a>.</p>
+      </section>
+
+      <section class="screen" id="SCR-C20" data-id="SCR-C20" data-title="Ниже порога" data-desc="Предупреждение при итоге ниже порога. Сохранение не блокируется. Без слов о провале.">
+        <div class="h1">Итог ниже рекомендованного минимума</div>
+        <div class="warn">Это не медицинская рекомендация. Посоветуйтесь с тренером или врачом.</div>
+        <p class="lead small muted">Сохранение не блокируется. Решение за вами.</p>
+        <a class="btn" href="#SCR-C17">Понятно</a>
+        <a class="btn sec" href="#SCR-C18">Изменить</a>
+        <a class="link" href="#SCR-S15">Подробнее</a>
+      </section>
+
+      <!-- ============ ПРОГРЕСС ============ -->
+
+      <section class="screen" id="SCR-C23" data-id="SCR-C23" data-title="Прогресс" data-tab="SCR-C23" data-desc="Список замеров и веса. Графики позже (Later). Есть состояния загрузки, пусто, ошибки и офлайн.">
+        <div class="h1">Прогресс</div>
+
+        <div class="sv sv-normal">
+          <a class="card row" href="#SCR-C22"><span><strong>Вес</strong><br><span class="small muted">78,4 кг · 20 нояб.</span></span></a>
+          <a class="card row" href="#SCR-C22"><span><strong>Талия</strong><br><span class="small muted">84 см · 20 нояб.</span></span></a>
+          <a class="btn" href="#SCR-C22">Добавить</a>
+          <p class="small muted">Графики появятся позже.</p>
+        </div>
+
+        <div class="sv sv-empty">
+          <div class="card">
+            <h3>Замеров пока нет</h3>
+            <p class="muted small">Внесите вес или замеры, когда будет удобно.</p>
+            <a class="btn" href="#SCR-C22">Добавить</a>
+          </div>
+        </div>
+
+        <div class="sv sv-loading" aria-busy="true">
+          <div class="sk big"></div><div class="sk"></div><div class="sk w60"></div>
+        </div>
+
+        <div class="sv sv-error">
+          <div class="err" role="alert"><strong>Не удалось загрузить замеры.</strong><br><span class="rid">requestId: 9e18b3f0</span></div>
+          <a class="btn" href="#SCR-C23">Повторить</a>
+        </div>
+
+        <div class="sv sv-offline">
+          <div class="warn">Нет соединения. Записи только для просмотра.</div>
+          <span class="btn off">Добавить</span>
+        </div>
+      </section>
+
+      <section class="screen" id="SCR-C22" data-id="SCR-C22" data-title="Вес и замеры" data-desc="Ввод веса и замеров. Повторный ввод за дату заменяет значение, история сохраняется.">
+        <div class="h1">Вес и замеры</div>
+        <label class="lbl" for="w">Вес, кг</label>
+        <input id="w" class="input" inputmode="decimal" value="78,4">
+        <div class="grid2">
+          <div><label class="lbl" for="t">Талия, см</label><input id="t" class="input" inputmode="decimal" value="84"></div>
+          <div><label class="lbl" for="b">Бёдра, см</label><input id="b" class="input" inputmode="decimal" placeholder="—"></div>
+        </div>
+        <label class="lbl" for="dt">Дата</label>
+        <input id="dt" class="input" value="23.11">
+        <a class="btn" href="#SCR-C23">Сохранить</a>
+        <a class="btn sec" href="#SCR-C23">Отмена</a>
+      </section>
+
+      <!-- ============ ПРОФИЛЬ И СВЯЗЬ ============ -->
+
+      <section class="screen" id="SCR-C29" data-id="SCR-C29" data-title="Профиль" data-tab="SCR-C29" data-desc="Профиль клиента: связь с тренером, согласия, уведомления, документы, экспорт, удаление.">
+        <div class="h1">Профиль</div>
+        <div class="card">
+          <h3>Мария</h3>
+          <p class="small muted" style="margin:0">Часовой пояс: Europe/Berlin</p>
+        </div>
+        <a class="row" href="#SCR-C30"><span>Связь с тренером</span><span class="small muted">Анна</span></a>
+        <a class="row" href="#SCR-S07-R"><span>Согласия</span></a>
+        <a class="row" href="#SCR-S11"><span>Уведомления</span></a>
+        <a class="row" href="#SCR-S15"><span>Документы</span></a>
+        <a class="row" href="#SCR-S13"><span>Экспорт данных</span></a>
+        <a class="row" href="#SCR-S14" style="color:var(--red)"><span>Удалить аккаунт</span></a>
+        <a class="btn sec" href="#SCR-S03">Выйти</a>
+      </section>
+
+      <section class="screen" id="SCR-C30" data-id="SCR-C30" data-title="Связь с тренером" data-tab="SCR-C29" data-desc="Статус связи, пауза и отвязка. Есть состояния загрузки, пусто, ошибки и офлайн.">
+        <div class="h1">Связь с тренером</div>
+
+        <div class="sv sv-normal">
+          <div class="card">
+            <div class="row" style="padding:0;border:0"><h3>Тренер Анна</h3><span class="badge b-ok">✓ Активна</span></div>
+            <p class="small" style="margin:6px 0">Доступ тренера: тренировки и выполнение — да. Питание и вес — нет.</p>
+            <a class="link" href="#SCR-S07-R">Изменить доступ</a>
+          </div>
+          <a class="btn sec" href="#SCR-C26">Попросить паузу</a>
+          <a class="btn dng" href="#SCR-C31">Отвязаться</a>
+        </div>
+
+        <div class="sv sv-empty">
+          <div class="card">
+            <h3>Тренер не назначен</h3>
+            <p class="muted small">Введите код, когда получите его от тренера.</p>
+            <a class="btn" href="#SCR-C04">Ввести код тренера</a>
+          </div>
+        </div>
+
+        <div class="sv sv-loading" aria-busy="true">
+          <div class="sk big"></div><div class="sk"></div>
+        </div>
+
+        <div class="sv sv-error">
+          <div class="err" role="alert"><strong>Не удалось загрузить статус связи.</strong><br><span class="rid">requestId: 41ab77de</span></div>
+          <a class="btn" href="#SCR-C30">Повторить</a>
+        </div>
+
+        <div class="sv sv-offline">
+          <div class="warn">Нет соединения. Изменения связи недоступны.</div>
+          <span class="btn off">Попросить паузу</span>
+          <span class="btn off dng">Отвязаться</span>
+        </div>
+      </section>
+
+      <section class="screen" id="SCR-C31" data-id="SCR-C31" data-title="Отвязка" data-desc="Отвязка клиентом: доступ тренера закрывается сразу, история остаётся у клиента.">
+        <div class="h1">Отвязаться от тренера?</div>
+        <div class="warn">Тренер потеряет доступ сразу. Ваша история останется у вас. Будущие назначенные тренировки будут сняты.</div>
+        <a class="btn dng" href="#SCR-C25">Отвязаться</a>
+        <a class="btn sec" href="#SCR-C30">Отмена</a>
+      </section>
+
+      <section class="screen" id="SCR-C25" data-id="SCR-C25" data-title="Связь завершена" data-desc="Связь закрыта. Собственная история доступна. Данные тренера недоступны.">
+        <div class="h1">Связь с тренером завершена</div>
+        <p class="lead">Ваша история тренировок сохранена. Планы и календарь тренера больше не доступны.</p>
+        <a class="card row" href="#SCR-C23"><span><strong>Моя история</strong></span></a>
+        <a class="btn" href="#SCR-C02">Ввести код нового тренера</a>
+        <a class="link" href="#SCR-C29">Профиль</a>
+      </section>
+
+      <section class="screen" id="SCR-S07-R" data-id="SCR-S07" data-title="Доступ тренера" data-desc="Отзыв доступа тренера: последствия показаны до подтверждения. Отзыв сразу завершает связь.">
+        <div class="h1">Согласия для тренера Анны</div>
+        <div class="card">
+          <div class="row"><span>Доступ тренера (тренировки, выполнение)</span><span class="sw on" aria-label="включено"></span></div>
+          <div class="row"><span>Питание для тренера</span><span class="sw" aria-label="выключено"></span></div>
+          <div class="row"><span>Вес и замеры для тренера</span><span class="sw" aria-label="выключено"></span></div>
+        </div>
+        <div class="warn">
+          <strong>Отзыв доступа закроет связь.</strong><br>
+          Тренер потеряет доступ сразу. Вы сможете связаться с новым тренером по коду.
+        </div>
+        <a class="btn dng" href="#SCR-C25">Отозвать доступ</a>
+        <a class="btn sec" href="#SCR-C30">Отмена</a>
+        <a class="link" href="#SCR-S13">Сначала экспорт данных</a>
+      </section>
+
+      <section class="screen" id="SCR-S11" data-id="SCR-S11" data-title="Уведомления" data-desc="Типы напоминаний и время. Текст push на экране блокировки без имён, веса и данных здоровья.">
+        <div class="h1">Уведомления</div>
+        <div class="card">
+          <div class="row"><span>Тренировка</span><span class="sw on" aria-label="включено"></span></div>
+          <div class="row"><span>Замеры</span><span class="sw on" aria-label="включено"></span></div>
+          <div class="row"><span>Питание</span><span class="sw" aria-label="выключено"></span></div>
+          <div class="row"><span>Время напоминания</span><span class="small muted">19:00</span></div>
+        </div>
+        <div class="note">Напоминания мягкие: их можно отключить в любой момент.</div>
+        <p class="small muted">Пример на экране блокировки:</p>
+        <div class="card"><strong>NoExcuse</strong><br><span class="small">У вас есть обновление в приложении</span></div>
+      </section>
+
+      <section class="screen" id="SCR-S13" data-id="SCR-S13" data-title="Экспорт данных" data-desc="Запрос выгрузки своих данных. Файл готов в течение 24 ч, ссылка действует 7 дней.">
+        <div class="h1">Экспорт данных</div>
+        <p class="lead">Файл будет готов в течение 24 ч. Ссылка для скачивания действует 7 дней.</p>
+        <div class="card"><div class="row" style="border:0"><span>Статус</span><span class="badge b-pause">‖ Экспорт ещё не запрашивали</span></div></div>
+        <a class="btn" href="#SCR-S13">Запросить экспорт</a>
+        <p class="small muted">Повторный запрос доступен раз в 24 ч.</p>
+      </section>
+
+      <section class="screen" id="SCR-S14" data-id="SCR-S14" data-title="Удаление аккаунта" data-desc="Удаление с каскадом. Перед удалением предложение экспорта. До окончательного удаления 14 дней для отмены.">
+        <div class="h1">Удалить аккаунт?</div>
+        <div class="card">
+          <p class="small" style="margin:0 0 6px"><strong>Будет удалено:</strong> профиль, тренировки, питание, замеры, история связей.</p>
+          <p class="small" style="margin:0"><strong>Связь с тренером</strong> завершится, доступ тренера закроется сразу.</p>
+        </div>
+        <div class="warn">Аккаунт можно восстановить в течение 14 дней. Потом восстановить будет нельзя.</div>
+        <a class="btn" href="#SCR-S13">Сначала экспорт</a>
+        <a class="btn dng" href="#SCR-S03">Удалить аккаунт</a>
+        <a class="btn sec" href="#SCR-C29">Отмена</a>
+      </section>
+
+      <section class="screen" id="SCR-S15" data-id="SCR-S15" data-title="Документы" data-desc="Юридические документы с версией и датой. Дисклеймер о том, что это не медицинская рекомендация.">
+        <div class="h1">Документы</div>
+        <div class="card">
+          <div class="row"><span>Условия использования · версия 2</span></div>
+          <div class="row"><span>Политика конфиденциальности · версия 1</span></div>
+          <div class="row"><span>Декларация о данных о здоровье · версия 1</span></div>
+          <div class="row"><span>Дисклеймер: не медицинская рекомендация</span></div>
+        </div>
+      </section>
+
+      <section class="screen" id="SCR-C21" data-id="SCR-C21" data-title="Перед стартом" data-desc="Дисклеймер при первом открытии плана. Показывается один раз, не блокирует работу.">
+        <div class="h1">Перед стартом</div>
+        <p class="lead">План и итоги не являются медицинской рекомендацией.</p>
+        <div class="warn">При боли или дискомфорте остановитесь и обратитесь к врачу.</div>
+        <a class="btn" href="#SCR-C07">Понятно</a>
+        <a class="link" href="#SCR-S15">Подробнее</a>
+      </section>
+
+      <!-- ============ ОШИБКИ И ГЛОБАЛЬНЫЕ ============ -->
+
+      <section class="screen" id="SCR-S17" data-id="SCR-S17" data-title="Нет сети" data-desc="Действие не выполнено. Данные не подменяются. Повтор доступен явно.">
+        <div class="h1">Нет соединения</div>
+        <div class="warn"><strong>Действие не выполнено.</strong><br>Проверьте связь и попробуйте ещё раз.</div>
+        <a class="btn" href="#SCR-S17">Повторить</a>
+        <a class="btn sec" href="#SCR-C07">Закрыть</a>
+      </section>
+
+      <section class="screen" id="SCR-S18" data-id="SCR-S18" data-title="Ошибка сервера" data-desc="Сбой на стороне сервера с кодом запроса для поддержки.">
+        <div class="h1">Что-то пошло не так</div>
+        <p class="lead">Попробуйте ещё раз. Если повторится, сообщите код поддержке.</p>
+        <div class="err"><span class="rid">requestId: 7f3a92c1</span></div>
+        <a class="btn" href="#SCR-S18">Повторить</a>
+        <button class="btn sec" type="button">Скопировать код</button>
+      </section>
+
+      <section class="screen" id="SCR-S19" data-id="SCR-S19" data-title="Сессия истекла" data-desc="Нужен повторный вход. Неотправленное помечено и отправится после входа.">
+        <div class="h1">Войдите снова</div>
+        <p class="lead">Сессия истекла. Несохранённые отметки помечены «Не отправлено» и отправятся после входа.</p>
+        <a class="btn" href="#SCR-S03">Войти снова</a>
+      </section>
+
+      <section class="screen" id="SCR-S16" data-id="SCR-S16" data-title="Не найдено" data-desc="Единый нейтральный ответ на любой недоступный ресурс. Также показывается для неизвестного адреса.">
+        <div class="h1">Не найдено или недоступно</div>
+        <p class="lead muted">Проверьте адрес или вернитесь на главный экран.</p>
+        <a class="btn" href="#SCR-C07">На главную</a>
+      </section>
+
+    </div>
+
+    <nav class="tabbar" id="tabbar" aria-label="Основная навигация">
+      <a href="#SCR-C07" data-tab="SCR-C07"><i aria-hidden="true">●</i>Сегодня</a>
+      <a href="#SCR-C15" data-tab="SCR-C15"><i aria-hidden="true">▦</i>Календарь</a>
+      <a href="#SCR-C17" data-tab="SCR-C17"><i aria-hidden="true">◍</i>Питание</a>
+      <a href="#SCR-C23" data-tab="SCR-C23"><i aria-hidden="true">↗</i>Прогресс</a>
+      <a href="#SCR-C29" data-tab="SCR-C29"><i aria-hidden="true">◯</i>Профиль</a>
+    </nav>
+  </div>
+
+  <aside class="desc" aria-live="polite">
+    <div class="small muted" id="desc-id"></div>
+    <h2 id="desc-title"></h2>
+    <p id="desc-text" style="margin:0 0 10px"></p>
+    <p class="small muted" style="margin:0">Нажмите на элементы экрана, чтобы перейти. Ссылки в оглавлении ведут на тот же экран.</p>
+  </aside>
+</main>
+</div>
+
+<script>
+(function () {
+  var stack = [];
+  var fromBack = false;
+  var phone = document.getElementById('phone');
+  var body = document.querySelector('.phone-body');
+
+  function resolve(id) {
+    var el = id && document.getElementById(id);
+    return el && el.classList.contains('screen') ? el : document.getElementById('SCR-S16');
+  }
+
+  function render(hash) {
+    var el = resolve(hash.replace(/^#/, '') || 'SCR-S02');
+    document.querySelectorAll('.screen').forEach(function (s) {
+      s.classList.toggle('active', s === el);
+    });
+    phone.classList.toggle('has-tabs', !!el.dataset.tab);
+    document.querySelectorAll('#tabbar a').forEach(function (a) {
+      a.classList.toggle('on', a.dataset.tab === el.dataset.tab);
+    });
+    document.getElementById('ttl-id').textContent = el.dataset.id;
+    document.getElementById('ttl').textContent = el.dataset.title;
+    document.getElementById('desc-id').textContent = el.dataset.id;
+    document.getElementById('desc-title').textContent = el.dataset.title;
+    document.getElementById('desc-text').textContent = el.dataset.desc || '';
+    document.title = el.dataset.id + ' · ' + el.dataset.title;
+    body.scrollTop = 0;
+  }
+
+  function onRoute() {
+    var h = location.hash || '#SCR-S02';
+    if (!fromBack && stack[stack.length - 1] !== h) stack.push(h);
+    fromBack = false;
+    render(h);
+  }
+
+  window.goBack = function () {
+    stack.pop();
+    var prev = stack[stack.length - 1] || '#SCR-S02';
+    if (location.hash === prev) { render(prev); return; }
+    fromBack = true;
+    location.hash = prev;
+  };
+
+  window.addEventListener('hashchange', onRoute);
+
+  document.getElementById('state').addEventListener('change', function (e) {
+    document.body.dataset.state = e.target.value;
+  });
+
+  // Кнопки с data-gate не переходят, пока не отмечены обязательные пункты.
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest('a[data-gate]');
+    if (!a) return;
+    var missing = a.dataset.gate.split(',').some(function (id) {
+      var cb = document.getElementById(id);
+      return !cb || !cb.checked;
+    });
+    if (missing) {
+      e.preventDefault();
+      var hint = a.closest('.screen').querySelector('.hint');
+      if (hint) hint.hidden = false;
+    }
+  });
+
+  onRoute();
+})();
+</script>
+</body>
+</html>

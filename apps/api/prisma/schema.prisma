@@ -45,6 +45,8 @@ model User {
   invites     Invite[]
   coachLinks  CoachClient[] @relation("coachLinks")
   clientLinks CoachClient[] @relation("clientLinks")
+  planVersions    PlanVersion[]
+  calendarEntries CalendarEntry[]
 }
 
 // Append-only: a row is never updated or deleted except by account deletion.
@@ -85,10 +87,43 @@ model CoachClient {
   createdAt DateTime  @default(now()) @db.Timestamptz(3)
   endedAt   DateTime? @db.Timestamptz(3)
   endedBy   EndedBy?
+  planVersions    PlanVersion[]
+  calendarEntries CalendarEntry[]
 
   // Keyset-paged link lists: the party column, then the (createdAt, id) order; the coach list also filters on status.
   @@index([coachId, status, createdAt, id])
   @@index([clientId, createdAt, id])
+}
+
+// Immutable plan versions of one link: an edit inserts version + 1 and never updates a row.
+// The current version is the highest one; version 0 (the empty plan) has no row.
+model PlanVersion {
+  id          String      @id @default(uuid()) @db.Uuid
+  linkId      String      @db.Uuid
+  link        CoachClient @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  version     Int
+  content     Json
+  createdById String?     @db.Uuid
+  createdBy   User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime    @default(now()) @db.Timestamptz(3)
+
+  @@unique([linkId, version])
+}
+
+// Client-generated id. workoutKey resolves against the link's current plan version on every read.
+model CalendarEntry {
+  id         String      @id @db.Uuid
+  linkId     String      @db.Uuid
+  link       CoachClient @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  clientId   String?     @db.Uuid
+  client     User?       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  date       DateTime    @db.Date
+  workoutKey String      @db.Uuid
+  createdAt  DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime    @updatedAt @db.Timestamptz(3)
+
+  @@index([clientId, date])
+  @@index([linkId, date])
 }
 
 // Fixed-window counter; one row per (key, window) incremented atomically.

@@ -9,6 +9,8 @@ import { createTestApp, localPublicJwk, resetDatabase, tokenFor } from './suppor
 const PRIVATE_KEY_PEM = process.env.LOCAL_AUTH_PRIVATE_KEY_PEM ?? '';
 const ISSUER = process.env.AUTH_ISSUER ?? '';
 const AUDIENCE = process.env.AUTH_AUDIENCE ?? '';
+// Start of a rate-limit window (windows are whole minutes of epoch time).
+const WINDOW_START_MS = Date.UTC(2026, 10, 21, 10, 0, 0);
 
 describe('auth', () => {
   let app: INestApplication;
@@ -88,14 +90,20 @@ describe('auth', () => {
     expect(response.body).toMatchObject({ code: 'VALIDATION_FAILED', errors: [{ path: 'subject' }] });
   });
 
+  // The limiter counts fixed windows of the injected clock: a frozen clock keeps the whole burst in one window.
   it('rate limits token issuance per client address', async () => {
-    for (let index = 0; index < RATE_LIMITS.localTokenIssue.limit; index += 1) {
-      await request(app.getHttpServer()).post('/v1/auth/local/token').send({ subject: `subject-${index}` }).expect(201);
+    const limited = await createTestApp({ clock: { now: () => new Date(WINDOW_START_MS) } });
+    try {
+      for (let index = 0; index < RATE_LIMITS.localTokenIssue.limit; index += 1) {
+        await request(limited.getHttpServer()).post('/v1/auth/local/token').send({ subject: `subject-${index}` }).expect(201);
+      }
+
+      const response = await request(limited.getHttpServer()).post('/v1/auth/local/token').send({ subject: 'one-more' }).expect(429);
+
+      expect(ProblemDetailsSchema.parse(response.body)).toMatchObject({ code: 'RATE_LIMITED', status: 429 });
+    } finally {
+      await limited.close();
     }
-
-    const response = await request(app.getHttpServer()).post('/v1/auth/local/token').send({ subject: 'one-more' }).expect(429);
-
-    expect(ProblemDetailsSchema.parse(response.body)).toMatchObject({ code: 'RATE_LIMITED', status: 429 });
   });
 });
 

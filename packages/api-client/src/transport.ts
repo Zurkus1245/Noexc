@@ -4,7 +4,7 @@ import { ApiError } from './errors';
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
 export interface HttpRequest {
-  readonly method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  readonly method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   readonly path: string;
   readonly auth: boolean;
   readonly query?: URLSearchParams;
@@ -15,7 +15,8 @@ export interface HttpRequest {
 export interface TransportOptions {
   readonly baseUrl: string;
   readonly getAccessToken: () => Promise<string | null>;
-  readonly onRefresh: () => Promise<void>;
+  // Receives the access token the 401 was returned for (null when sent without credentials).
+  readonly onRefresh: (rejectedToken: string | null) => Promise<void>;
   readonly fetch: FetchLike;
   readonly requestTimeoutMs?: number;
 }
@@ -85,10 +86,25 @@ export const createTransport = (options: TransportOptions) => {
   const requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
   const root = baseUrl.replace(/\/+$/, '');
 
-  const dispatch = async (request: HttpRequest, signal: AbortSignal): Promise<Response> => {
+  // Concurrent 401s for the same rejected token share one refresh. A settled refresh is forgotten, so a later
+  // 401 for that token reaches onRefresh again and the session layer decides whether it is still needed.
+  const refreshing = new Map<string | null, Promise<void>>();
+  const refreshRejected = (rejectedToken: string | null): Promise<void> => {
+    const inFlight = refreshing.get(rejectedToken);
+    if (inFlight) return inFlight;
+    const refresh = onRefresh(rejectedToken).finally(() => refreshing.delete(rejectedToken));
+    refreshing.set(rejectedToken, refresh);
+    return refresh;
+  };
+
+  const dispatch = async (
+    request: HttpRequest,
+    signal: AbortSignal,
+  ): Promise<{ response: Response; token: string | null }> => {
     const headers: Record<string, string> = { Accept: 'application/json' };
+    let token: string | null = null;
     if (request.auth) {
-      const token = await getAccessToken();
+      token = await getAccessToken();
       if (token) headers.Authorization = `Bearer ${token}`;
     }
     if (request.body !== undefined) headers['Content-Type'] = 'application/json';
@@ -97,12 +113,13 @@ export const createTransport = (options: TransportOptions) => {
     const query = request.query?.toString();
     const url = `${root}${request.path}${query ? `?${query}` : ''}`;
     try {
-      return await fetchImpl(url, {
+      const response = await fetchImpl(url, {
         method: request.method,
         headers,
         body: request.body === undefined ? undefined : JSON.stringify(request.body),
         signal,
       });
+      return { response, token };
     } catch (cause) {
       throw networkError(cause);
     }
@@ -114,11 +131,11 @@ export const createTransport = (options: TransportOptions) => {
     const controller = new AbortController();
     const deadline = setTimeout(() => controller.abort(), requestTimeoutMs);
     try {
-      const response = await dispatch(request, controller.signal);
+      const { response, token } = await dispatch(request, controller.signal);
       if (response.status === HTTP_UNAUTHORIZED && request.auth) {
         clearTimeout(deadline);
         if (retried) throw await sessionExpired(response);
-        await onRefresh();
+        await refreshRejected(token);
         return attempt(request, true);
       }
       if (!response.ok) throw await httpError(response);

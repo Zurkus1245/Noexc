@@ -59,6 +59,6 @@ export async function resetDatabase(app: INestApplication): Promise<void> {
     throw new Error(`Refusing to reset schema "${current?.schema ?? 'unknown'}" outside the test schema`);
   }
   await prisma.$executeRawUnsafe(
-    `TRUNCATE TABLE "IdempotencyRecord", "RateLimitHit", "Consent", "Invite", "CoachClient", "User" RESTART IDENTITY CASCADE`,
+    `TRUNCATE TABLE "IdempotencyRecord", "RateLimitHit", "Consent", "Invite", "CalendarEntry", "PlanVersion", "CoachClient", "User" RESTART IDENTITY CASCADE`,
   );
 }

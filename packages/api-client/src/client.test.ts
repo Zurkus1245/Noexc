@@ -168,6 +168,62 @@ describe('createApiClient', () => {
   });
 });
 
+describe('401 refresh', () => {
+  const authOf = (init?: RequestInit) => (init?.headers as Record<string, string>).Authorization;
+
+  // Accepts only the given token; any other bearer gets a 401, as the server does for a stale token.
+  const acceptingOnly = (token: string) =>
+    vi.fn<FetchLike>(async (_url, init) =>
+      authOf(init) === `Bearer ${token}` ? json(200, USER_PAYLOAD) : problem(401, 'UNAUTHENTICATED'),
+    );
+
+  it('shares one refresh between parallel 401s and retries each request once', async () => {
+    let current = 'token-1';
+    let releaseRefresh = (): void => undefined;
+    const gate = new Promise<void>((resolve) => {
+      releaseRefresh = resolve;
+    });
+    const onRefresh = vi.fn(async (rejectedToken: string | null) => {
+      if (rejectedToken !== current) return;
+      await gate;
+      current = 'token-2';
+    });
+    const fetch = acceptingOnly('token-2');
+    const client = createApiClient({ baseUrl: BASE_URL, getAccessToken: async () => current, onRefresh, fetch });
+
+    const requests = Promise.all([client.me.get(), client.me.get()]);
+    // Lets both 401s reach the refresh while it is still in flight.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    releaseRefresh();
+
+    expect((await requests).map((user) => user.id)).toEqual([USER_ID, USER_ID]);
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+    expect(onRefresh).toHaveBeenCalledWith('token-1');
+    expect(fetch).toHaveBeenCalledTimes(4);
+    expect(fetch.mock.calls.slice(2).map(([, init]) => authOf(init))).toEqual(['Bearer token-2', 'Bearer token-2']);
+  });
+
+  it('passes the rejected token so a 401 for an already-replaced token does not refresh again', async () => {
+    let current = 'token-2';
+    let refreshes = 0;
+    const onRefresh = vi.fn(async (rejectedToken: string | null) => {
+      if (rejectedToken !== current) return;
+      refreshes += 1;
+      current = 'token-3';
+    });
+    const getAccessToken = vi.fn<() => Promise<string | null>>().mockResolvedValueOnce('token-1').mockImplementation(async () => current);
+    const fetch = acceptingOnly('token-2');
+    const client = createApiClient({ baseUrl: BASE_URL, getAccessToken, onRefresh, fetch });
+
+    expect(await client.me.get()).toMatchObject({ id: USER_ID });
+
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+    expect(onRefresh).toHaveBeenCalledWith('token-1');
+    expect(refreshes).toBe(0);
+    expect(authOf(fetch.mock.calls[1]?.[1])).toBe('Bearer token-2');
+  });
+});
+
 describe('coach and client links', () => {
   const CLIENT_ID = '423e4567-e89b-42d3-a456-426614174000';
   const LINK = {
@@ -283,5 +339,207 @@ describe('request timeout', () => {
 
     await vi.advanceTimersByTimeAsync(1);
     expect(await outcome).toMatchObject({ code: 'NETWORK_ERROR' });
+  });
+});
+
+describe('plans and calendar', () => {
+  const CLIENT_ID = '423e4567-e89b-42d3-a456-426614174000';
+  const LINK_ID = '523e4567-e89b-42d3-a456-426614174000';
+  const ENTRY_ID = '623e4567-e89b-42d3-a456-426614174000';
+  const WORKOUT_KEY = '723e4567-e89b-42d3-a456-426614174000';
+  const PLAN = {
+    linkId: LINK_ID,
+    clientId: CLIENT_ID,
+    version: 2,
+    content: { blocks: [] },
+    updatedAt: CREATED_AT,
+  };
+  const ENTRY = {
+    id: ENTRY_ID,
+    linkId: LINK_ID,
+    clientId: CLIENT_ID,
+    coachId: USER_ID,
+    date: '2026-11-23',
+    workoutKey: WORKOUT_KEY,
+    blockTitle: null,
+    workout: null,
+  };
+  const PLAN_PATH = `${BASE_URL}/v1/coach/clients/${CLIENT_ID}/plan`;
+  const CALENDAR_PATH = `${BASE_URL}/v1/coach/clients/${CLIENT_ID}/calendar`;
+  const headersOf = (init?: RequestInit) => init?.headers as Record<string, string>;
+
+  it('gets the coach plan', async () => {
+    const { client, fetch } = setup(json(200, PLAN));
+
+    expect(await client.coach.getPlan(CLIENT_ID)).toEqual(PLAN);
+    expect(fetch.mock.calls[0]?.[0]).toBe(PLAN_PATH);
+    expect(fetch.mock.calls[0]?.[1]?.method).toBe('GET');
+  });
+
+  it('puts a plan with baseVersion, content and the Idempotency-Key header', async () => {
+    const { client, fetch } = setup(json(200, PLAN));
+    const body = { baseVersion: 1, content: { blocks: [] } };
+
+    expect(await client.coach.putPlan(CLIENT_ID, body, { idempotencyKey: IDEMPOTENCY_KEY })).toEqual(PLAN);
+
+    const [url, init] = fetch.mock.calls[0] ?? [];
+    expect(url).toBe(PLAN_PATH);
+    expect(init?.method).toBe('PUT');
+    expect(JSON.parse(init?.body as string)).toEqual(body);
+    expect(headersOf(init)['Idempotency-Key']).toBe(IDEMPOTENCY_KEY);
+  });
+
+  it('surfaces a stale baseVersion as VERSION_CONFLICT', async () => {
+    const { client } = setup(problem(409, 'VERSION_CONFLICT'));
+
+    await expect(
+      client.coach.putPlan(CLIENT_ID, { baseVersion: 1, content: { blocks: [] } }, { idempotencyKey: IDEMPOTENCY_KEY }),
+    ).rejects.toMatchObject({ code: 'VERSION_CONFLICT', status: 409 });
+  });
+
+  it('surfaces a removed scheduled workout as WORKOUT_SCHEDULED with the keys', async () => {
+    const { client } = setup(
+      problem(409, 'WORKOUT_SCHEDULED', { errors: [{ path: 'workoutKey', message: WORKOUT_KEY }] }),
+    );
+
+    const error = await captureError(client.coach.putPlan(CLIENT_ID, { baseVersion: 1, content: { blocks: [] } }));
+
+    expect(error).toMatchObject({ code: 'WORKOUT_SCHEDULED', status: 409 });
+    expect((error as ApiError).errors).toEqual([{ path: 'workoutKey', message: WORKOUT_KEY }]);
+  });
+
+  it('rejects a plan with duplicate keys before fetch', async () => {
+    const { client, fetch } = setup();
+    const block = { key: WORKOUT_KEY, title: 'Base', workouts: [] };
+
+    const error = await captureError(
+      client.coach.putPlan(CLIENT_ID, { baseVersion: 0, content: { blocks: [block, block] } }),
+    );
+
+    expect(error).toMatchObject({ code: 'INVALID_REQUEST' });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('lists plan versions with cursor pagination', async () => {
+    const { client, fetch } = setup(json(200, { items: [{ version: 2, createdAt: CREATED_AT }], nextCursor: 'v1' }));
+
+    expect(await client.coach.listPlanVersions(CLIENT_ID, { limit: 10, cursor: 'v3' })).toEqual({
+      items: [{ version: 2, createdAt: CREATED_AT }],
+      nextCursor: 'v1',
+    });
+    expect(fetch.mock.calls[0]?.[0]).toBe(`${PLAN_PATH}/versions?limit=10&cursor=v3`);
+  });
+
+  it('gets one plan version by number', async () => {
+    const { client, fetch } = setup(json(200, PLAN));
+
+    expect(await client.coach.getPlanVersion(CLIENT_ID, 2)).toEqual(PLAN);
+    expect(fetch.mock.calls[0]?.[0]).toBe(`${PLAN_PATH}/versions/2`);
+  });
+
+  it('rejects version 0 before fetch', async () => {
+    const { client, fetch } = setup();
+
+    await expect(client.coach.getPlanVersion(CLIENT_ID, 0)).rejects.toMatchObject({ code: 'INVALID_REQUEST' });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('maps a missing plan version to NOT_FOUND', async () => {
+    const { client } = setup(problem(404, 'NOT_FOUND'));
+
+    await expect(client.coach.getPlanVersion(CLIENT_ID, 9)).rejects.toMatchObject({ code: 'NOT_FOUND' });
+  });
+
+  it('gets coach calendar entries for a date range', async () => {
+    const { client, fetch } = setup(json(200, { items: [ENTRY] }));
+
+    expect(await client.coach.getCalendar(CLIENT_ID, { from: '2026-11-21', to: '2026-11-27' })).toEqual({
+      items: [ENTRY],
+    });
+    expect(fetch.mock.calls[0]?.[0]).toBe(`${CALENDAR_PATH}?from=2026-11-21&to=2026-11-27`);
+  });
+
+  it('rejects a calendar range that ends before it starts before fetch', async () => {
+    const { client, fetch } = setup();
+
+    await expect(client.coach.getCalendar(CLIENT_ID, { from: '2026-11-27', to: '2026-11-21' })).rejects.toMatchObject({
+      code: 'INVALID_REQUEST',
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('creates a calendar entry with the Idempotency-Key header', async () => {
+    const { client, fetch } = setup(json(201, ENTRY));
+    const body = { id: ENTRY_ID, date: '2026-11-23', workoutKey: WORKOUT_KEY };
+
+    expect(await client.coach.createCalendarEntry(CLIENT_ID, body, { idempotencyKey: IDEMPOTENCY_KEY })).toEqual(ENTRY);
+
+    const [url, init] = fetch.mock.calls[0] ?? [];
+    expect(url).toBe(CALENDAR_PATH);
+    expect(init?.method).toBe('POST');
+    expect(JSON.parse(init?.body as string)).toEqual(body);
+    expect(headersOf(init)['Idempotency-Key']).toBe(IDEMPOTENCY_KEY);
+  });
+
+  it('surfaces a workout missing from the plan as WORKOUT_NOT_IN_PLAN', async () => {
+    const { client } = setup(problem(422, 'WORKOUT_NOT_IN_PLAN'));
+
+    await expect(
+      client.coach.createCalendarEntry(
+        CLIENT_ID,
+        { id: ENTRY_ID, date: '2026-11-23', workoutKey: WORKOUT_KEY },
+        { idempotencyKey: IDEMPOTENCY_KEY },
+      ),
+    ).rejects.toMatchObject({ code: 'WORKOUT_NOT_IN_PLAN', status: 422 });
+  });
+
+  it('moves a calendar entry with PATCH and the new date', async () => {
+    const { client, fetch } = setup(json(200, { ...ENTRY, date: '2026-11-24' }));
+
+    const moved = await client.coach.moveCalendarEntry(CLIENT_ID, ENTRY_ID, { date: '2026-11-24' });
+
+    expect(moved.date).toBe('2026-11-24');
+    const [url, init] = fetch.mock.calls[0] ?? [];
+    expect(url).toBe(`${CALENDAR_PATH}/${ENTRY_ID}`);
+    expect(init?.method).toBe('PATCH');
+    expect(JSON.parse(init?.body as string)).toEqual({ date: '2026-11-24' });
+  });
+
+  it('deletes a calendar entry', async () => {
+    const { client, fetch } = setup(new Response(null, { status: 204 }));
+
+    await expect(client.coach.deleteCalendarEntry(CLIENT_ID, ENTRY_ID)).resolves.toBeUndefined();
+
+    expect(fetch.mock.calls[0]?.[0]).toBe(`${CALENDAR_PATH}/${ENTRY_ID}`);
+    expect(fetch.mock.calls[0]?.[1]?.method).toBe('DELETE');
+  });
+
+  it('rejects a malformed entry id before fetch', async () => {
+    const { client, fetch } = setup();
+
+    await expect(client.coach.deleteCalendarEntry(CLIENT_ID, 'not-a-uuid')).rejects.toMatchObject({
+      code: 'INVALID_REQUEST',
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('gets the client calendar for a date range', async () => {
+    const { client, fetch } = setup(json(200, { items: [ENTRY] }));
+
+    expect(await client.client.getCalendar({ from: '2026-11-21', to: '2026-11-27' })).toEqual({ items: [ENTRY] });
+    expect(fetch.mock.calls[0]?.[0]).toBe(`${BASE_URL}/v1/client/calendar?from=2026-11-21&to=2026-11-27`);
+  });
+
+  it('lists the client plans of open links', async () => {
+    const { client, fetch } = setup(json(200, { items: [PLAN] }));
+
+    expect(await client.client.listPlans()).toEqual({ items: [PLAN] });
+    expect(fetch.mock.calls[0]?.[0]).toBe(`${BASE_URL}/v1/client/plans`);
+  });
+
+  it('rejects the bare array shape from the client plans endpoint', async () => {
+    const { client } = setup(json(200, [PLAN]));
+
+    await expect(client.client.listPlans()).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
   });
 });

@@ -1,5 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Button, Screen, Text } from '@noexcuse/ui';
+import { Button, Screen, Text, spacing } from '@noexcuse/ui';
+import { StyleSheet, View } from 'react-native';
 import { isNotFoundError } from '../../../shared/api/api-error';
 import { ApiErrorBanner } from '../../../shared/components/ApiErrorBanner';
 import { LoadingView } from '../../../shared/components/LoadingView';
@@ -35,6 +36,22 @@ export function ClientDetailScreen() {
     <Screen>
       <Text variant="title">{detail.data.client.displayName}</Text>
       <Text tone="muted">{t(statusLabelKey(detail.data.link.status))}</Text>
+      <View style={styles.actions}>
+        <Button
+          label={t('plan.open')}
+          variant="secondary"
+          onPress={() => router.push({ pathname: '/clients/[clientId]/plan', params: { clientId } })}
+        />
+        <Button
+          label={t('coachCalendar.open')}
+          variant="secondary"
+          onPress={() => router.push({ pathname: '/clients/[clientId]/calendar', params: { clientId } })}
+        />
+      </View>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  actions: { gap: spacing.sm },
+});

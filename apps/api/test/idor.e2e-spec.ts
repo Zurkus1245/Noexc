@@ -1,16 +1,19 @@
 import { createPublicKey, randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import { CONSENT_VERSIONS, ProblemDetailsSchema } from '@noexcuse/contracts';
+import { addDays, todayInTimeZone } from '@noexcuse/domain';
 import { SignJWT, generateKeyPair, importPKCS8, type JWTPayload } from 'jose';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { ALL_REQUIRED_CONSENTS, type Actor, createInvite, linkBetween, redeem, signIn } from './coaching-helpers';
+import { planWith } from './plan-helpers';
 import { createTestApp, localPublicJwk, resetDatabase, tokenFor } from './support';
 
 // Authorization matrix: every route the controllers register, every relevant actor and resource id.
 // Foreign and nonexistent resources must answer identically (404 NOT_FOUND, same body modulo requestId).
 
-const STATES = ['active', 'paused', 'ended', 'consentRevoked'] as const;
+// 'none': coachA and clientX never link; clientX's link id is unknown, like any random id.
+const STATES = ['active', 'paused', 'ended', 'consentRevoked', 'none'] as const;
 type LinkState = (typeof STATES)[number];
 
 type CallerName = 'anon' | 'noProfile' | 'coachA' | 'coachB' | 'clientX' | 'clientY';
@@ -34,6 +37,16 @@ const EXPECTED_ROUTES = [
   'POST /v1/links/:linkId/pause',
   'POST /v1/links/:linkId/resume',
   'POST /v1/links/:linkId/end',
+  'GET /v1/coach/clients/:clientId/plan',
+  'PUT /v1/coach/clients/:clientId/plan',
+  'GET /v1/coach/clients/:clientId/plan/versions',
+  'GET /v1/coach/clients/:clientId/plan/versions/:version',
+  'GET /v1/coach/clients/:clientId/calendar',
+  'POST /v1/coach/clients/:clientId/calendar',
+  'PATCH /v1/coach/clients/:clientId/calendar/:entryId',
+  'DELETE /v1/coach/clients/:clientId/calendar/:entryId',
+  'GET /v1/client/calendar',
+  'GET /v1/client/plans',
 ].sort();
 
 const UNKNOWN_CODE = '0123456789ABCDEFGHJKMNPQRS';
@@ -45,7 +58,7 @@ const AUDIENCE = process.env.AUTH_AUDIENCE ?? '';
 type Outcome = { readonly status: number; readonly code?: string };
 type Expect = Outcome | ((state: LinkState) => Outcome);
 type Caller = { auth?: string; id?: string };
-type Req = { readonly method: 'get' | 'post' | 'patch' | 'delete'; readonly path: string; readonly body?: object };
+type Req = { readonly method: 'get' | 'post' | 'put' | 'patch' | 'delete'; readonly path: string; readonly body?: object };
 
 type World = {
   readonly coachA: Actor;
@@ -60,6 +73,11 @@ type World = {
   readonly inviteB: { id: string; code: string };
   readonly usedCode: string;
   readonly revokedCode: string;
+  // Stage 2: clientX's plan (versions 1 and 2) and entries; clientZ's entry. Under 'none' the X ids are unknown.
+  readonly workoutX: string;
+  readonly entryPastX: string;
+  readonly entryFutureX: string;
+  readonly entryZ: string;
 };
 
 type Ctx = { readonly w: World; readonly state: LinkState; readonly caller: CallerName };
@@ -84,6 +102,10 @@ const RATE_LIMITED: Outcome = { status: 429, code: 'RATE_LIMITED' };
 const OK: Outcome = { status: 200 };
 const CREATED: Outcome = { status: 201 };
 const NO_CONTENT: Outcome = { status: 204 };
+const VERSION_CONFLICT: Outcome = { status: 409, code: 'VERSION_CONFLICT' };
+const WORKOUT_SCHEDULED: Outcome = { status: 409, code: 'WORKOUT_SCHEDULED' };
+const WORKOUT_NOT_IN_PLAN: Outcome = { status: 422, code: 'WORKOUT_NOT_IN_PLAN' };
+const ENTRY_ID_CONFLICT: Outcome = { status: 409, code: 'ENTRY_ID_CONFLICT' };
 
 // Gates every protected route answers before any handler logic: no token, then no profile.
 const GATES = { anon: UNAUTHENTICATED, noProfile: PROFILE_REQUIRED } as const;
@@ -143,13 +165,26 @@ async function buildWorld(app: INestApplication, state: LinkState): Promise<Worl
   const noProfile = { auth: `Bearer ${await tokenFor(app, `subject-${randomUUID()}`)}` };
 
   const usedA = await createInvite(app, coachA);
-  const linkX = (await redeem(app, clientX, usedA.code).expect(201)).body.id as string;
+  const linkX = state === 'none' ? randomUUID() : ((await redeem(app, clientX, usedA.code).expect(201)).body.id as string);
   const linkZ = (await linkBetween(app, coachA, clientZ)).id;
   const inviteA = await createInvite(app, coachA);
 
   const revokedB = await createInvite(app, coachB);
   await call(app, coachB, { method: 'delete', path: `/v1/invites/${revokedB.id}` }).expect(204);
   const inviteB = await createInvite(app, coachB);
+
+  // Plan and entries are seeded before the state is applied: ending the link removes only the future entries.
+  const workoutX = randomUUID();
+  const entryPastX = randomUUID();
+  const entryFutureX = randomUUID();
+  const entryZ = randomUUID();
+  if (state !== 'none') {
+    await seedPlan(app, coachA, clientX, workoutX, [
+      { id: entryPastX, date: dayOffset(-2) },
+      { id: entryFutureX, date: dayOffset(3) },
+    ]);
+  }
+  await seedPlan(app, coachA, clientZ, randomUUID(), [{ id: entryZ, date: dayOffset(1) }]);
 
   const world: World = {
     coachA,
@@ -164,9 +199,26 @@ async function buildWorld(app: INestApplication, state: LinkState): Promise<Worl
     inviteB: { id: inviteB.id, code: inviteB.code },
     usedCode: usedA.code,
     revokedCode: revokedB.code,
+    workoutX,
+    entryPastX,
+    entryFutureX,
+    entryZ,
   };
   await applyState(app, world, state);
   return world;
+}
+
+// Two plan versions (both containing the workout) and the given entries, written by the coach.
+async function seedPlan(app: INestApplication, coach: Actor, client: Actor, workoutKey: string, entries: { id: string; date: string }[]) {
+  await call(app, coach, { method: 'put', path: planPath(client), body: { baseVersion: 0, content: planWith(workoutKey, 'Push') } }).expect(200);
+  await call(app, coach, { method: 'put', path: planPath(client), body: { baseVersion: 1, content: planWith(workoutKey, 'Pull') } }).expect(200);
+  for (const entry of entries) {
+    await call(app, coach, {
+      method: 'post',
+      path: calendarPath(client),
+      body: { id: entry.id, date: entry.date, workoutKey },
+    }).expect(201);
+  }
 }
 
 // The link under test (coachA <-> clientX) moves into the requested state through the public API only.
@@ -307,11 +359,13 @@ function linkActionWants(action: 'pause' | 'resume' | 'end', label: string): Rec
     return { anon: UNAUTHENTICATED, noProfile: PROFILE_REQUIRED, coachA: NOT_FOUND, coachB: NOT_FOUND, clientX: NOT_FOUND, clientY: NOT_FOUND };
   }
   const coachA: Expect = (state) => {
+    if (state === 'none') return NOT_FOUND;
     if (action === 'pause') return state === 'active' || state === 'consentRevoked' ? OK : INVALID_TRANSITION;
     if (action === 'resume') return state === 'paused' ? OK : INVALID_TRANSITION;
     return state === 'ended' ? INVALID_TRANSITION : OK;
   };
   const clientX: Expect = (state) => {
+    if (state === 'none') return NOT_FOUND;
     if (action !== 'end') return INVALID_TRANSITION;
     return state === 'ended' ? INVALID_TRANSITION : OK;
   };
@@ -368,6 +422,172 @@ const subjectOf = (auth: string): string => {
 };
 
 // ---- Suites ---------------------------------------------------------------------------------------
+
+// ---- Stage 2: plan and calendar rows --------------------------------------------------------------
+
+const TIMEZONE = 'Europe/Berlin';
+const todayIn = (): string => todayInTimeZone(TIMEZONE, new Date());
+const dayOffset = (days: number): string => addDays(todayIn(), days);
+const dateRangeOf = (): string => `from=${dayOffset(-7)}&to=${dayOffset(7)}`;
+const planPath = (client: { id: string }): string => `/v1/coach/clients/${client.id}/plan`;
+const calendarPath = (client: { id: string }): string => `/v1/coach/clients/${client.id}/calendar`;
+const OPEN_STATES: readonly LinkState[] = ['active', 'paused'];
+const onOpenLink = (outcome: Outcome): Expect => (state) => (OPEN_STATES.includes(state) ? outcome : NOT_FOUND);
+
+// Coach routes: the own client answers by link state. A client without a link answers 404 to every coach
+// (pass NOT_FOUND as the outcome), and a client calling a coach route is refused by role first.
+const coachWant = (open: Outcome): Record<CallerName, Expect> => ({
+  ...GATES,
+  coachA: onOpenLink(open),
+  coachB: NOT_FOUND,
+  clientX: FORBIDDEN_ROLE,
+  clientY: FORBIDDEN_ROLE,
+});
+
+// The client keeps the past of an ended link; a withdrawn coach_access does not hide the client's own entries.
+function clientXEntryIds(w: World, state: LinkState): string[] {
+  if (state === 'none') return [];
+  if (state === 'ended') return [w.entryPastX];
+  return [w.entryPastX, w.entryFutureX].sort();
+}
+
+function verifyPlanOfX(version: number) {
+  return (res: request.Response, { w }: Ctx): void => {
+    expect(res.body).toMatchObject({ linkId: w.linkX, clientId: w.clientX.id, version });
+  };
+}
+
+function verifyCalendarOfX(res: request.Response, { w }: Ctx): void {
+  expect(res.body.items.map((item: { id: string }) => item.id).sort()).toEqual([w.entryPastX, w.entryFutureX].sort());
+}
+
+function ownStage2Rows(): Row[] {
+  const plan = (w: World) => planPath(w.clientX);
+  const calendar = (w: World) => calendarPath(w.clientX);
+  return [
+    ...rowsOf('read plan', (w) => ({ method: 'get', path: plan(w) }), coachWant(OK), verifyPlanOfX(2)),
+    ...rowsOf(
+      'save plan',
+      (w) => ({ method: 'put', path: plan(w), body: { baseVersion: 2, content: planWith(w.workoutX, 'Renamed') } }),
+      coachWant(OK),
+      verifyPlanOfX(3),
+    ),
+    ...rowsOf(
+      'save plan with stale base version',
+      (w) => ({ method: 'put', path: plan(w), body: { baseVersion: 1, content: planWith(w.workoutX, 'Stale') } }),
+      coachWant(VERSION_CONFLICT),
+    ),
+    ...rowsOf(
+      'save plan dropping a scheduled workout',
+      (w) => ({ method: 'put', path: plan(w), body: { baseVersion: 2, content: planWith(randomUUID(), 'Dropped') } }),
+      coachWant(WORKOUT_SCHEDULED),
+    ),
+    ...rowsOf(
+      'list plan versions',
+      (w) => ({ method: 'get', path: `${plan(w)}/versions` }),
+      coachWant(OK),
+      (res) => {
+        expect(res.body.items.map((item: { version: number }) => item.version)).toEqual([2, 1]);
+        expect(res.body.nextCursor).toBeNull();
+      },
+    ),
+    ...rowsOf(
+      'read version 1',
+      (w) => ({ method: 'get', path: `${plan(w)}/versions/1` }),
+      coachWant(OK),
+      (res, { w }) => expect(res.body).toMatchObject({ version: 1, clientId: w.clientX.id }),
+    ),
+    ...rowsOf('read unknown version', (w) => ({ method: 'get', path: `${plan(w)}/versions/3` }), coachWant(NOT_FOUND)),
+    ...rowsOf(
+      'list calendar',
+      (w) => ({ method: 'get', path: `${calendar(w)}?${dateRangeOf()}` }),
+      coachWant(OK),
+      verifyCalendarOfX,
+    ),
+    ...rowsOf(
+      'create entry',
+      (w) => ({ method: 'post', path: calendar(w), body: { id: randomUUID(), date: dayOffset(6), workoutKey: w.workoutX } }),
+      coachWant(CREATED),
+      (res, { w }) => expect(res.body).toMatchObject({ linkId: w.linkX, clientId: w.clientX.id, coachId: w.coachA.id, workoutKey: w.workoutX }),
+    ),
+    ...rowsOf(
+      'create entry with a workout not in the plan',
+      (w) => ({ method: 'post', path: calendar(w), body: { id: randomUUID(), date: dayOffset(6), workoutKey: randomUUID() } }),
+      coachWant(WORKOUT_NOT_IN_PLAN),
+    ),
+    ...rowsOf(
+      'create entry outside the date window',
+      (w) => ({ method: 'post', path: calendar(w), body: { id: randomUUID(), date: dayOffset(400), workoutKey: w.workoutX } }),
+      coachWant(VALIDATION_FAILED),
+    ),
+    ...rowsOf(
+      'create entry with an id already used for another date',
+      (w) => ({ method: 'post', path: calendar(w), body: { id: w.entryFutureX, date: dayOffset(6), workoutKey: w.workoutX } }),
+      coachWant(ENTRY_ID_CONFLICT),
+    ),
+    ...rowsOf(
+      'move own entry',
+      (w) => ({ method: 'patch', path: `${calendar(w)}/${w.entryFutureX}`, body: { date: dayOffset(5) } }),
+      coachWant(OK),
+      (res) => expect(res.body).toMatchObject({ date: dayOffset(5) }),
+    ),
+    ...rowsOf(
+      'move entry of another client',
+      (w) => ({ method: 'patch', path: `${calendar(w)}/${w.entryZ}`, body: { date: dayOffset(5) } }),
+      coachWant(NOT_FOUND),
+    ),
+    ...rowsOf(
+      'move random entry',
+      (w) => ({ method: 'patch', path: `${calendar(w)}/${randomUUID()}`, body: { date: dayOffset(5) } }),
+      coachWant(NOT_FOUND),
+    ),
+    ...rowsOf('delete own entry', (w) => ({ method: 'delete', path: `${calendar(w)}/${w.entryFutureX}` }), coachWant(NO_CONTENT)),
+    ...rowsOf(
+      'delete entry of another client',
+      (w) => ({ method: 'delete', path: `${calendar(w)}/${w.entryZ}` }),
+      coachWant(NOT_FOUND),
+    ),
+    ...rowsOf('delete random entry', (w) => ({ method: 'delete', path: `${calendar(w)}/${randomUUID()}` }), coachWant(NOT_FOUND)),
+  ];
+}
+
+// Another client's id (no link to this coach) under a coach route: every coach gets 404, and X's entry ids do not resolve.
+function unlinkedStage2Rows(): Row[] {
+  const plan = (w: World) => planPath(w.clientY);
+  const calendar = (w: World) => calendarPath(w.clientY);
+  const want = coachWant(NOT_FOUND);
+  return [
+    ...rowsOf('read plan of unlinked client', (w) => ({ method: 'get', path: plan(w) }), want),
+    ...rowsOf('list calendar of unlinked client', (w) => ({ method: 'get', path: `${calendar(w)}?${dateRangeOf()}` }), want),
+    ...rowsOf(
+      'move entry of linked client through unlinked client',
+      (w) => ({ method: 'patch', path: `${calendar(w)}/${w.entryFutureX}`, body: { date: dayOffset(5) } }),
+      want,
+    ),
+    ...rowsOf('delete entry of linked client through unlinked client', (w) => ({ method: 'delete', path: `${calendar(w)}/${w.entryFutureX}` }), want),
+  ];
+}
+
+// Client routes return only the caller's own plans and entries, across all the caller's links.
+function clientStage2Rows(): Row[] {
+  const want = { ...GATES, coachA: FORBIDDEN_ROLE, coachB: FORBIDDEN_ROLE, clientX: OK, clientY: OK };
+  return [
+    ...rowsOf('list own calendar', () => ({ method: 'get', path: `/v1/client/calendar?${dateRangeOf()}` }), want, verifyClientCalendar),
+    ...rowsOf('list own plans', () => ({ method: 'get', path: '/v1/client/plans' }), want, verifyClientPlans),
+  ];
+}
+
+function verifyClientCalendar(res: request.Response, { w, state, caller }: Ctx): void {
+  const expected = caller === 'clientX' ? clientXEntryIds(w, state) : [];
+  expect(res.body.items.map((item: { id: string }) => item.id).sort()).toEqual(expected);
+  for (const item of res.body.items) expect(item.clientId).toBe(callerId(w, caller));
+}
+
+function verifyClientPlans(res: request.Response, { w, state, caller }: Ctx): void {
+  const hasOpenPlan = caller === 'clientX' && state !== 'none' && state !== 'ended';
+  expect(res.body.items.map((plan: { linkId: string }) => plan.linkId)).toEqual(hasOpenPlan ? [w.linkX] : []);
+  for (const plan of res.body.items) expect(plan).toMatchObject({ clientId: callerId(w, caller), version: 2 });
+}
 
 describe('IDOR and authorization matrix', () => {
   let app: INestApplication;
@@ -455,6 +675,9 @@ describe('IDOR and authorization matrix', () => {
         ...linkActionRows(action, () => randomUUID(), 'random id'),
         ...linkActionRows(action, () => 'not-a-uuid', 'malformed id'),
       ]),
+      ...ownStage2Rows(),
+      ...unlinkedStage2Rows(),
+      ...clientStage2Rows(),
     ];
 
     it.each(rows)('$caller: $label', async (row) => {
@@ -488,7 +711,7 @@ describe('IDOR and authorization matrix', () => {
       const invite = await createInvite(app, w.coachA);
       const res = await redeem(app, w.clientX, invite.code);
 
-      if (state === 'ended') {
+      if (state === 'ended' || state === 'none') {
         expect(res.status).toBe(201);
         expect(res.body).toMatchObject({ coachId: w.coachA.id, status: 'active' });
         expect(res.body.id).not.toBe(w.linkX);
@@ -646,6 +869,57 @@ describe('IDOR and authorization matrix', () => {
       expect(JSON.stringify(x.body)).not.toContain(w.clientY.id);
       expect(JSON.stringify(y.body)).not.toContain(w.clientX.id);
       expect(JSON.stringify(y.body)).not.toContain(w.linkX);
+    });
+  });
+
+  describe('calendar entries across clients of one coach', () => {
+    let w: World;
+
+    beforeEach(async () => {
+      w = await buildWorld(app, 'active');
+    }, 30_000);
+
+    it('refuses an entry of client Y addressed through client X, and the reverse, and leaves both entries intact', async () => {
+      await linkBetween(app, w.coachA, w.clientY);
+      const workoutY = randomUUID();
+      const entryY = randomUUID();
+      const yPath = (id: string) => `/v1/coach/clients/${w.clientY.id}/calendar/${id}`;
+      const xPath = (id: string) => `/v1/coach/clients/${w.clientX.id}/calendar/${id}`;
+      await call(app, w.coachA, { method: 'put', path: planPath(w.clientY), body: { baseVersion: 0, content: planWith(workoutY, 'Foreign') } }).expect(200);
+      await call(app, w.coachA, { method: 'post', path: calendarPath(w.clientY), body: { id: entryY, date: dayOffset(4), workoutKey: workoutY } }).expect(201);
+
+      const moveY = await call(app, w.coachA, { method: 'patch', path: xPath(entryY), body: { date: dayOffset(5) } });
+      const deleteY = await call(app, w.coachA, { method: 'delete', path: xPath(entryY) });
+      const createOnY = await call(app, w.coachA, {
+        method: 'post',
+        path: calendarPath(w.clientX),
+        body: { id: entryY, date: dayOffset(5), workoutKey: w.workoutX },
+      });
+      const unknown = await call(app, w.coachA, { method: 'delete', path: xPath(randomUUID()) });
+      for (const res of [moveY, deleteY, createOnY]) expectOutcome(res, NOT_FOUND);
+      expect(withoutRequestId(deleteY.body)).toEqual(withoutRequestId(unknown.body));
+
+      const moveX = await call(app, w.coachA, { method: 'patch', path: yPath(w.entryFutureX), body: { date: dayOffset(5) } });
+      const deleteX = await call(app, w.coachA, { method: 'delete', path: yPath(w.entryFutureX) });
+      expectOutcome(moveX, NOT_FOUND);
+      expectOutcome(deleteX, NOT_FOUND);
+
+      const ofY = await call(app, w.coachA, { method: 'get', path: `${calendarPath(w.clientY)}?from=${dayOffset(4)}&to=${dayOffset(4)}` }).expect(200);
+      expect(ofY.body.items).toEqual([expect.objectContaining({ id: entryY, date: dayOffset(4), workoutKey: workoutY })]);
+      const ofX = await call(app, w.coachA, { method: 'get', path: `${calendarPath(w.clientX)}?${dateRangeOf()}` }).expect(200);
+      expect(ofX.body.items.map((item: { id: string }) => item.id).sort()).toEqual([w.entryPastX, w.entryFutureX].sort());
+    });
+
+    it('shows each client only its own entries and plans', async () => {
+      const x = await call(app, w.clientX, { method: 'get', path: `/v1/client/calendar?${dateRangeOf()}` }).expect(200);
+      const z = await call(app, w.clientZ, { method: 'get', path: `/v1/client/calendar?${dateRangeOf()}` }).expect(200);
+      expect(x.body.items.map((item: { id: string }) => item.id).sort()).toEqual([w.entryPastX, w.entryFutureX].sort());
+      expect(z.body.items.map((item: { id: string }) => item.id)).toEqual([w.entryZ]);
+
+      const xPlans = await call(app, w.clientX, { method: 'get', path: '/v1/client/plans' }).expect(200);
+      const zPlans = await call(app, w.clientZ, { method: 'get', path: '/v1/client/plans' }).expect(200);
+      expect(xPlans.body.items.map((plan: { linkId: string }) => plan.linkId)).toEqual([w.linkX]);
+      expect(zPlans.body.items.map((plan: { linkId: string }) => plan.linkId)).toEqual([w.linkZ]);
     });
   });
 

@@ -9,6 +9,9 @@ const FORBIDDEN_STATUS = 403;
 // Display fields of any user. Safe to show to a party of a link; never includes the auth subject.
 export type PublicProfile = { id: string; displayName: string; timezone: string };
 
+// The answer whenever the authenticated caller no longer has a profile, including after deleting it mid-request.
+export const profileRequired = (): ApiError => new ApiError(FORBIDDEN_STATUS, 'PROFILE_REQUIRED', 'Create a profile first');
+
 // The caller's profile behind a verified subject, and display data of other users. Identity and coaching
 // both depend on this; neither depends on the other.
 @Injectable()
@@ -22,9 +25,7 @@ export class SessionService {
 
   async requireProfile(authSubject: string): Promise<User> {
     const profile = await this.findProfileBySubject(authSubject);
-    if (profile === null) {
-      throw new ApiError(FORBIDDEN_STATUS, 'PROFILE_REQUIRED', 'Create a profile first');
-    }
+    if (profile === null) throw profileRequired();
     return profile;
   }
 

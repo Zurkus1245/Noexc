@@ -10,7 +10,7 @@ import {
 } from '@noexcuse/domain';
 import { ConsentService } from '../consent/consent.service';
 import { SessionService } from '../auth/session/session.service';
-import { CoachingRepository } from './coaching.repository';
+import { CoachingRepository, type Db } from './coaching.repository';
 
 const NOT_FOUND_STATUS = 404;
 const ACCESS_CONSENT_TYPES = ['coach_access', 'health_data'] as const satisfies readonly ConsentType[];
@@ -25,9 +25,17 @@ export class AccessPolicy {
     private readonly session: SessionService,
   ) {}
 
-  async assertClientAccess(actor: AccessActor, clientId: string, scope: AccessScope) {
+  // Writers: the open link is locked and then decided on, so a link that ends meanwhile answers 404.
+  async assertClientAccessLocked(tx: Db, actor: AccessActor, clientId: string, scope: AccessScope) {
+    const open = await this.repo.findOpenLink(actor.id, clientId, tx);
+    if (open === null) throw new ApiError(NOT_FOUND_STATUS, 'NOT_FOUND', 'Not found');
+    await this.repo.lockLinks(tx, [open.id]);
+    return this.assertClientAccess(actor, clientId, scope, tx);
+  }
+
+  async assertClientAccess(actor: AccessActor, clientId: string, scope: AccessScope, db?: Db) {
     const [link, consents] = await Promise.all([
-      this.repo.findOpenLink(actor.id, clientId),
+      this.repo.findOpenLink(actor.id, clientId, db),
       this.consents.findConsents(clientId, ACCESS_CONSENT_TYPES),
     ]);
     const decision = decideClientAccess({

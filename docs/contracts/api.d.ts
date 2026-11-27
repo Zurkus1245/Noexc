@@ -10,6 +10,76 @@ export declare const LocalTokenResponseSchema: z.ZodObject<{
 }, z.core.$strip>;
 export type LocalTokenResponse = z.infer<typeof LocalTokenResponseSchema>;
 
+// calendar.d.ts
+import { z } from 'zod';
+export declare const CALENDAR_MAX_RANGE_DAYS = 62;
+export declare const CALENDAR_DATE_WINDOW_DAYS = 366;
+export declare const CalendarRangeQuerySchema: z.ZodObject<{
+    from: z.ZodString;
+    to: z.ZodString;
+}, z.core.$strip>;
+export type CalendarRangeQuery = z.infer<typeof CalendarRangeQuerySchema>;
+export declare const CalendarEntrySchema: z.ZodObject<{
+    id: z.ZodUUID;
+    linkId: z.ZodUUID;
+    clientId: z.ZodUUID;
+    coachId: z.ZodNullable<z.ZodUUID>;
+    date: z.ZodString;
+    workoutKey: z.ZodUUID;
+    blockTitle: z.ZodNullable<z.ZodString>;
+    workout: z.ZodNullable<z.ZodObject<{
+        key: z.ZodUUID;
+        title: z.ZodString;
+        exercises: z.ZodArray<z.ZodObject<{
+            key: z.ZodUUID;
+            name: z.ZodString;
+            sets: z.ZodNumber;
+            repsMin: z.ZodNumber;
+            repsMax: z.ZodNumber;
+            weightKg: z.ZodNullable<z.ZodNumber>;
+            restSec: z.ZodNullable<z.ZodNumber>;
+            note: z.ZodNullable<z.ZodString>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+export type CalendarEntry = z.infer<typeof CalendarEntrySchema>;
+export declare const CalendarEntriesResponseSchema: z.ZodObject<{
+    items: z.ZodArray<z.ZodObject<{
+        id: z.ZodUUID;
+        linkId: z.ZodUUID;
+        clientId: z.ZodUUID;
+        coachId: z.ZodNullable<z.ZodUUID>;
+        date: z.ZodString;
+        workoutKey: z.ZodUUID;
+        blockTitle: z.ZodNullable<z.ZodString>;
+        workout: z.ZodNullable<z.ZodObject<{
+            key: z.ZodUUID;
+            title: z.ZodString;
+            exercises: z.ZodArray<z.ZodObject<{
+                key: z.ZodUUID;
+                name: z.ZodString;
+                sets: z.ZodNumber;
+                repsMin: z.ZodNumber;
+                repsMax: z.ZodNumber;
+                weightKg: z.ZodNullable<z.ZodNumber>;
+                restSec: z.ZodNullable<z.ZodNumber>;
+                note: z.ZodNullable<z.ZodString>;
+            }, z.core.$strip>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+export type CalendarEntriesResponse = z.infer<typeof CalendarEntriesResponseSchema>;
+export declare const CreateCalendarEntryRequestSchema: z.ZodObject<{
+    id: z.ZodUUID;
+    date: z.ZodString;
+    workoutKey: z.ZodUUID;
+}, z.core.$strip>;
+export type CreateCalendarEntryRequest = z.infer<typeof CreateCalendarEntryRequestSchema>;
+export declare const MoveCalendarEntryRequestSchema: z.ZodObject<{
+    date: z.ZodString;
+}, z.core.$strip>;
+export type MoveCalendarEntryRequest = z.infer<typeof MoveCalendarEntryRequestSchema>;
+
 // coaching.d.ts
 import { z } from 'zod';
 export declare const LINK_STATUSES: readonly ["active", "paused", "ended"];
@@ -145,6 +215,11 @@ export declare const cursorPage: <T extends z.ZodType>(item: T) => z.ZodObject<{
     nextCursor: z.ZodNullable<z.ZodString>;
 }, z.core.$strip>;
 export declare const tolerantEnum: <const T extends readonly [string, ...string[]]>(values: T) => z.ZodCatch<z.ZodUnion<readonly [z.ZodEnum<{ [k_1 in T[number]]: k_1; } extends infer T_1 ? { [k in keyof T_1]: T_1[k]; } : never>, z.ZodLiteral<"unknown">]>>;
+export declare const MS_PER_DAY: number;
+export declare const localDateToUtcMs: (date: string) => number;
+export declare const utcMsToLocalDate: (ms: number) => string;
+export declare const LocalDateSchema: z.ZodString;
+export type LocalDate = z.infer<typeof LocalDateSchema>;
 
 // consent.d.ts
 import { z } from 'zod';
@@ -192,7 +267,7 @@ export type GrantConsentRequest = z.infer<typeof GrantConsentRequestSchema>;
 
 // errors.d.ts
 import { z } from 'zod';
-export declare const ERROR_CODES: readonly ["VALIDATION_FAILED", "UNAUTHENTICATED", "PROFILE_REQUIRED", "PROFILE_EXISTS", "FORBIDDEN_ROLE", "NOT_FOUND", "INVITE_INVALID", "LINK_EXISTS", "INVALID_TRANSITION", "CONSENT_REQUIRED", "RATE_LIMITED", "IDEMPOTENCY_CONFLICT", "INTERNAL"];
+export declare const ERROR_CODES: readonly ["VALIDATION_FAILED", "UNAUTHENTICATED", "PROFILE_REQUIRED", "PROFILE_EXISTS", "FORBIDDEN_ROLE", "NOT_FOUND", "INVITE_INVALID", "LINK_EXISTS", "INVALID_TRANSITION", "CONSENT_REQUIRED", "RATE_LIMITED", "IDEMPOTENCY_CONFLICT", "VERSION_CONFLICT", "WORKOUT_SCHEDULED", "WORKOUT_NOT_IN_PLAN", "ENTRY_ID_CONFLICT", "INTERNAL"];
 export declare const ErrorCodeSchema: z.ZodCatch<z.ZodUnion<readonly [z.ZodEnum<{
     VALIDATION_FAILED: "VALIDATION_FAILED";
     UNAUTHENTICATED: "UNAUTHENTICATED";
@@ -206,6 +281,10 @@ export declare const ErrorCodeSchema: z.ZodCatch<z.ZodUnion<readonly [z.ZodEnum<
     CONSENT_REQUIRED: "CONSENT_REQUIRED";
     RATE_LIMITED: "RATE_LIMITED";
     IDEMPOTENCY_CONFLICT: "IDEMPOTENCY_CONFLICT";
+    VERSION_CONFLICT: "VERSION_CONFLICT";
+    WORKOUT_SCHEDULED: "WORKOUT_SCHEDULED";
+    WORKOUT_NOT_IN_PLAN: "WORKOUT_NOT_IN_PLAN";
+    ENTRY_ID_CONFLICT: "ENTRY_ID_CONFLICT";
     INTERNAL: "INTERNAL";
 }>, z.ZodLiteral<"unknown">]>>;
 export type ErrorCode = z.infer<typeof ErrorCodeSchema>;
@@ -231,6 +310,10 @@ export declare const ProblemDetailsSchema: z.ZodObject<{
         CONSENT_REQUIRED: "CONSENT_REQUIRED";
         RATE_LIMITED: "RATE_LIMITED";
         IDEMPOTENCY_CONFLICT: "IDEMPOTENCY_CONFLICT";
+        VERSION_CONFLICT: "VERSION_CONFLICT";
+        WORKOUT_SCHEDULED: "WORKOUT_SCHEDULED";
+        WORKOUT_NOT_IN_PLAN: "WORKOUT_NOT_IN_PLAN";
+        ENTRY_ID_CONFLICT: "ENTRY_ID_CONFLICT";
         INTERNAL: "INTERNAL";
     }>, z.ZodLiteral<"unknown">]>>;
     detail: z.ZodString;
@@ -294,17 +377,68 @@ export declare const AccountExportSchema: z.ZodObject<{
         revokedAt: z.ZodNullable<z.ZodISODateTime>;
         createdAt: z.ZodISODateTime;
     }, z.core.$strip>>;
+    plans: z.ZodArray<z.ZodObject<{
+        linkId: z.ZodUUID;
+        clientId: z.ZodUUID;
+        version: z.ZodNumber;
+        content: z.ZodObject<{
+            blocks: z.ZodArray<z.ZodObject<{
+                key: z.ZodUUID;
+                title: z.ZodString;
+                workouts: z.ZodArray<z.ZodObject<{
+                    key: z.ZodUUID;
+                    title: z.ZodString;
+                    exercises: z.ZodArray<z.ZodObject<{
+                        key: z.ZodUUID;
+                        name: z.ZodString;
+                        sets: z.ZodNumber;
+                        repsMin: z.ZodNumber;
+                        repsMax: z.ZodNumber;
+                        weightKg: z.ZodNullable<z.ZodNumber>;
+                        restSec: z.ZodNullable<z.ZodNumber>;
+                        note: z.ZodNullable<z.ZodString>;
+                    }, z.core.$strip>>;
+                }, z.core.$strip>>;
+            }, z.core.$strip>>;
+        }, z.core.$strip>;
+        updatedAt: z.ZodNullable<z.ZodISODateTime>;
+    }, z.core.$strip>>;
+    calendarEntries: z.ZodArray<z.ZodObject<{
+        id: z.ZodUUID;
+        linkId: z.ZodUUID;
+        clientId: z.ZodUUID;
+        coachId: z.ZodNullable<z.ZodUUID>;
+        date: z.ZodString;
+        workoutKey: z.ZodUUID;
+        blockTitle: z.ZodNullable<z.ZodString>;
+        workout: z.ZodNullable<z.ZodObject<{
+            key: z.ZodUUID;
+            title: z.ZodString;
+            exercises: z.ZodArray<z.ZodObject<{
+                key: z.ZodUUID;
+                name: z.ZodString;
+                sets: z.ZodNumber;
+                repsMin: z.ZodNumber;
+                repsMax: z.ZodNumber;
+                weightKg: z.ZodNullable<z.ZodNumber>;
+                restSec: z.ZodNullable<z.ZodNumber>;
+                note: z.ZodNullable<z.ZodString>;
+            }, z.core.$strip>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>;
 }, z.core.$strip>;
 export type AccountExport = z.infer<typeof AccountExportSchema>;
 
 // index.d.ts
 export * from './auth';
+export * from './calendar';
 export * from './coaching';
 export * from './common';
 export * from './consent';
 export * from './errors';
 export * from './export';
 export * from './invite';
+export * from './plan';
 export * from './rate-limits';
 export * from './user';
 
@@ -348,6 +482,186 @@ export declare const RedeemInviteRequestSchema: z.ZodObject<{
     }, z.core.$strip>>;
 }, z.core.$strip>;
 export type RedeemInviteRequest = z.infer<typeof RedeemInviteRequestSchema>;
+
+// plan.d.ts
+import { z } from 'zod';
+export declare const PLAN_LIMITS: {
+    readonly textMin: 1;
+    readonly titleMax: 80;
+    readonly noteMax: 280;
+    readonly blocksMax: 20;
+    readonly workoutsPerBlockMax: 14;
+    readonly exercisesPerWorkoutMin: 1;
+    readonly exercisesPerWorkoutMax: 30;
+    readonly setsMin: 1;
+    readonly setsMax: 20;
+    readonly repsMin: 1;
+    readonly repsMax: 100;
+    readonly weightKgMin: 0;
+    readonly weightKgMax: 500;
+    readonly weightKgStep: 0.25;
+    readonly restSecMin: 0;
+    readonly restSecMax: 900;
+};
+export declare const ExerciseSchema: z.ZodObject<{
+    key: z.ZodUUID;
+    name: z.ZodString;
+    sets: z.ZodNumber;
+    repsMin: z.ZodNumber;
+    repsMax: z.ZodNumber;
+    weightKg: z.ZodNullable<z.ZodNumber>;
+    restSec: z.ZodNullable<z.ZodNumber>;
+    note: z.ZodNullable<z.ZodString>;
+}, z.core.$strip>;
+export type Exercise = z.infer<typeof ExerciseSchema>;
+export declare const WorkoutSchema: z.ZodObject<{
+    key: z.ZodUUID;
+    title: z.ZodString;
+    exercises: z.ZodArray<z.ZodObject<{
+        key: z.ZodUUID;
+        name: z.ZodString;
+        sets: z.ZodNumber;
+        repsMin: z.ZodNumber;
+        repsMax: z.ZodNumber;
+        weightKg: z.ZodNullable<z.ZodNumber>;
+        restSec: z.ZodNullable<z.ZodNumber>;
+        note: z.ZodNullable<z.ZodString>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+export type Workout = z.infer<typeof WorkoutSchema>;
+export declare const BlockSchema: z.ZodObject<{
+    key: z.ZodUUID;
+    title: z.ZodString;
+    workouts: z.ZodArray<z.ZodObject<{
+        key: z.ZodUUID;
+        title: z.ZodString;
+        exercises: z.ZodArray<z.ZodObject<{
+            key: z.ZodUUID;
+            name: z.ZodString;
+            sets: z.ZodNumber;
+            repsMin: z.ZodNumber;
+            repsMax: z.ZodNumber;
+            weightKg: z.ZodNullable<z.ZodNumber>;
+            restSec: z.ZodNullable<z.ZodNumber>;
+            note: z.ZodNullable<z.ZodString>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+export type Block = z.infer<typeof BlockSchema>;
+export declare const PlanContentSchema: z.ZodObject<{
+    blocks: z.ZodArray<z.ZodObject<{
+        key: z.ZodUUID;
+        title: z.ZodString;
+        workouts: z.ZodArray<z.ZodObject<{
+            key: z.ZodUUID;
+            title: z.ZodString;
+            exercises: z.ZodArray<z.ZodObject<{
+                key: z.ZodUUID;
+                name: z.ZodString;
+                sets: z.ZodNumber;
+                repsMin: z.ZodNumber;
+                repsMax: z.ZodNumber;
+                weightKg: z.ZodNullable<z.ZodNumber>;
+                restSec: z.ZodNullable<z.ZodNumber>;
+                note: z.ZodNullable<z.ZodString>;
+            }, z.core.$strip>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+export type PlanContent = z.infer<typeof PlanContentSchema>;
+export declare const PlanSchema: z.ZodObject<{
+    linkId: z.ZodUUID;
+    clientId: z.ZodUUID;
+    version: z.ZodNumber;
+    content: z.ZodObject<{
+        blocks: z.ZodArray<z.ZodObject<{
+            key: z.ZodUUID;
+            title: z.ZodString;
+            workouts: z.ZodArray<z.ZodObject<{
+                key: z.ZodUUID;
+                title: z.ZodString;
+                exercises: z.ZodArray<z.ZodObject<{
+                    key: z.ZodUUID;
+                    name: z.ZodString;
+                    sets: z.ZodNumber;
+                    repsMin: z.ZodNumber;
+                    repsMax: z.ZodNumber;
+                    weightKg: z.ZodNullable<z.ZodNumber>;
+                    restSec: z.ZodNullable<z.ZodNumber>;
+                    note: z.ZodNullable<z.ZodString>;
+                }, z.core.$strip>>;
+            }, z.core.$strip>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>;
+    updatedAt: z.ZodNullable<z.ZodISODateTime>;
+}, z.core.$strip>;
+export type Plan = z.infer<typeof PlanSchema>;
+export declare const PutPlanRequestSchema: z.ZodObject<{
+    baseVersion: z.ZodNumber;
+    content: z.ZodObject<{
+        blocks: z.ZodArray<z.ZodObject<{
+            key: z.ZodUUID;
+            title: z.ZodString;
+            workouts: z.ZodArray<z.ZodObject<{
+                key: z.ZodUUID;
+                title: z.ZodString;
+                exercises: z.ZodArray<z.ZodObject<{
+                    key: z.ZodUUID;
+                    name: z.ZodString;
+                    sets: z.ZodNumber;
+                    repsMin: z.ZodNumber;
+                    repsMax: z.ZodNumber;
+                    weightKg: z.ZodNullable<z.ZodNumber>;
+                    restSec: z.ZodNullable<z.ZodNumber>;
+                    note: z.ZodNullable<z.ZodString>;
+                }, z.core.$strip>>;
+            }, z.core.$strip>>;
+        }, z.core.$strip>>;
+    }, z.core.$strip>;
+}, z.core.$strip>;
+export type PutPlanRequest = z.infer<typeof PutPlanRequestSchema>;
+export declare const PlanVersionSummarySchema: z.ZodObject<{
+    version: z.ZodNumber;
+    createdAt: z.ZodISODateTime;
+}, z.core.$strip>;
+export type PlanVersionSummary = z.infer<typeof PlanVersionSummarySchema>;
+export declare const PlanVersionsPageSchema: z.ZodObject<{
+    items: z.ZodArray<z.ZodObject<{
+        version: z.ZodNumber;
+        createdAt: z.ZodISODateTime;
+    }, z.core.$strip>>;
+    nextCursor: z.ZodNullable<z.ZodString>;
+}, z.core.$strip>;
+export type PlanVersionsPage = z.infer<typeof PlanVersionsPageSchema>;
+export declare const ClientPlansResponseSchema: z.ZodObject<{
+    items: z.ZodArray<z.ZodObject<{
+        linkId: z.ZodUUID;
+        clientId: z.ZodUUID;
+        version: z.ZodNumber;
+        content: z.ZodObject<{
+            blocks: z.ZodArray<z.ZodObject<{
+                key: z.ZodUUID;
+                title: z.ZodString;
+                workouts: z.ZodArray<z.ZodObject<{
+                    key: z.ZodUUID;
+                    title: z.ZodString;
+                    exercises: z.ZodArray<z.ZodObject<{
+                        key: z.ZodUUID;
+                        name: z.ZodString;
+                        sets: z.ZodNumber;
+                        repsMin: z.ZodNumber;
+                        repsMax: z.ZodNumber;
+                        weightKg: z.ZodNullable<z.ZodNumber>;
+                        restSec: z.ZodNullable<z.ZodNumber>;
+                        note: z.ZodNullable<z.ZodString>;
+                    }, z.core.$strip>>;
+                }, z.core.$strip>>;
+            }, z.core.$strip>>;
+        }, z.core.$strip>;
+        updatedAt: z.ZodNullable<z.ZodISODateTime>;
+    }, z.core.$strip>>;
+}, z.core.$strip>;
+export type ClientPlansResponse = z.infer<typeof ClientPlansResponseSchema>;
 
 // rate-limits.d.ts
 export declare const RATE_LIMITS: {

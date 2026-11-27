@@ -52,32 +52,40 @@ export class CoachingRepository {
     return tx.invite.update({ where: { id: inviteId }, data: { usedAt } });
   }
 
-  findOpenLinkBetween(db: Db, coachId: string, clientId: string) {
+  findOpenLink(coachId: string, clientId: string, db: Db = this.prisma) {
     return db.coachClient.findFirst({ where: { coachId, clientId, status: { not: 'ended' } } });
-  }
-
-  findOpenLink(coachId: string, clientId: string) {
-    return this.prisma.coachClient.findFirst({ where: { coachId, clientId, status: { not: 'ended' } } });
   }
 
   createActiveLink(tx: Db, coachId: string, clientId: string) {
     return tx.coachClient.create({ data: { coachId, clientId, status: 'active' } });
   }
 
-  findLinkById(linkId: string) {
-    return this.prisma.coachClient.findUnique({ where: { id: linkId } });
+  findLinkById(linkId: string, db: Db = this.prisma) {
+    return db.coachClient.findUnique({ where: { id: linkId } });
   }
 
-  // Guarded by the status read earlier: a concurrent transition makes the count zero.
-  async transitionLinkFrom(
-    linkId: string,
-    fromStatus: Prisma.CoachClientWhereInput['status'],
-    data: Prisma.CoachClientUpdateManyMutationInput,
-  ): Promise<number> {
-    const { count } = await this.prisma.coachClient.updateMany({ where: { id: linkId, status: fromStatus }, data });
-    return count;
+  updateLink(tx: Db, linkId: string, data: Prisma.CoachClientUpdateInput) {
+    return tx.coachClient.update({ where: { id: linkId }, data });
   }
 
+  // Advisory locks per link, taken in link-id order so that multi-link transactions cannot deadlock each other.
+  // Plan and calendar writers take the same lock for their link; they re-read the link status under it.
+  async lockLinks(tx: Db, linkIds: readonly string[]): Promise<void> {
+    for (const linkId of [...linkIds].sort()) {
+      // $executeRaw: the lock function returns void, which a raw query cannot deserialize.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${linkId}::text, 0))`;
+    }
+  }
+
+  // Every link of the client, ended ones included: the client's calendar keeps the past of ended links.
+  // Only the columns the plan and calendar reads need.
+  listAllLinksOfClient(clientId: string) {
+    return this.prisma.coachClient.findMany({
+      where: { clientId },
+      select: { id: true, coachId: true, clientId: true, status: true },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+  }
   listOpenLinksOfCoach(coachId: string, after: LinkCursor | null, take: number) {
     return this.prisma.coachClient.findMany({
       where: { coachId, status: { not: 'ended' }, ...keysetAfter(after) },
@@ -112,8 +120,8 @@ export class CoachingRepository {
   }
 
   // Both sides of the account: a user is in the export as coach or as client.
-  listLinksOf(userId: string) {
-    return this.prisma.coachClient.findMany({
+  listLinksOf(userId: string, db: Db = this.prisma) {
+    return db.coachClient.findMany({
       where: { OR: [{ coachId: userId }, { clientId: userId }] },
       orderBy: { createdAt: 'asc' },
     });

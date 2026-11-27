@@ -8,9 +8,10 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CoachingModule } from './modules/coaching/coaching.module';
 import { LocalAuthModule } from './modules/auth/local/local-auth.module';
 import { IdentityModule } from './modules/identity/identity.module';
+import { PlansModule } from './modules/plans/plans.module';
 
 @Module({
-  imports: [ClockModule, CommonModule, InfraModule, AuthModule, IdentityModule, CoachingModule],
+  imports: [ClockModule, CommonModule, InfraModule, AuthModule, IdentityModule, CoachingModule, PlansModule],
 })
 export class AppModule {
   // The config is passed in, not read here: the environment is validated once, before any module is wired.
