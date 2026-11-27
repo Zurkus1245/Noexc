@@ -21,14 +21,15 @@ Ambiguity touching architecture/security/data integrity → ask, don't guess.
   expo-notifications. EAS Update only for JS fixes, never to bypass store review.
 - Backend `apps/api`: NestJS modular monolith, REST `/v1`, PostgreSQL + Prisma, pg-boss jobs
   (separate `worker` process, no Redis until measured need), S3-compatible storage via presigned URLs.
-- Market: EU. Hosting & managed Postgres/S3 in EU region; every vendor with EU data residency + DPA.
-- Auth: managed OIDC (EU region) behind `AuthProvider` adapter, JWT verified via JWKS.
+- Market: Russia (ADR 0008). Personal data of RF citizens stored in Russia (152-FZ): hosting & managed Postgres/S3 in a
+  Russian region; every vendor touching personal data hosts it in Russia under a data-processing instruction, or gets none.
+- Auth: managed OIDC (hosted in Russia) behind `AuthProvider` adapter, JWT verified via JWKS.
   Sign in with Apple mandatory if any social login.
 - Push: FCM/APNs behind `PushProvider` adapter.
 - Payments/billing: OUT OF SCOPE for current stage. Do not add payment code, SDKs, paywalls or entitlement
   checks. Architecture must not block adding a `billing` module later (module boundaries, no feature
   flags hardcoded to "free").
-- Observability: structured logs + Sentry (EU region) behind adapter; PII scrubbing on.
+- Observability: structured logs + Sentry (hosted in Russia) behind adapter; PII scrubbing on.
 - Tests: Vitest/Jest, RN Testing Library, Maestro (E2E), supertest + Testcontainers (Postgres).
 - CI: GitHub Actions — typecheck, lint, test, contract diff, build. Local: Docker Compose.
 - Pipelines: monorepo ≠ joint build/deploy. One independent CI/CD workflow per deployable app
@@ -90,8 +91,8 @@ never substitute mock data in production paths.
 ## 9. Security & data
 No secrets in code/repo; env per environment; `.env*` gitignored. Tokens only in secure storage.
 Treat input and responses as untrusted; validate at boundaries. Least privilege (DB roles, RBAC admin).
-Health data = GDPR art.9 special category: explicit versioned consent, minimization, DPIA, export & delete
-account, EU hosting, admin access to health data audited and need-to-know only. No PII/health data in logs, analytics, push text on lockscreen, or error messages.
+Health data = special category (152-FZ art.10): separate explicit versioned consent, minimization, DPIA, export & delete
+account, hosting in Russia, admin access to health data audited and need-to-know only. No PII/health data in logs, analytics, push text on lockscreen, or error messages.
 Invite codes: high entropy, expiring, rate-limited. Test IDOR on every client-data endpoint.
 Never disable security to make something work.
 

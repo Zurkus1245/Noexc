@@ -1,6 +1,6 @@
 # 0002 Local-first hosting
 
-Status: accepted for the local stage. EU hosting vendor decision pending.
+Status: accepted for the local stage. EU hosting superseded by ADR 0008 (market Russia, hosting in Russia).
 
 ## Context
 The market is EU and health data is GDPR art. 9 special category, so production hosting, managed Postgres
