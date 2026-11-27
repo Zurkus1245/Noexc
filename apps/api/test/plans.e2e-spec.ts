@@ -262,12 +262,10 @@ describe('plans and calendar', () => {
     await linkBetween(app, coach, client);
     const workoutKey = randomUUID();
     const idempotencyKey = randomUUID();
+    // One body for both sends: planWith draws fresh ids, and a replay must repeat the exact request.
+    const body = { baseVersion: 0, content: planWith(workoutKey, 'Push') };
     const send = () =>
-      api()
-        .put(planPath(client))
-        .set('Authorization', coach.auth)
-        .set('Idempotency-Key', idempotencyKey)
-        .send({ baseVersion: 0, content: planWith(workoutKey, 'Push') });
+      api().put(planPath(client)).set('Authorization', coach.auth).set('Idempotency-Key', idempotencyKey).send(body);
     const first = await send().expect(200);
     // The replay still works while the client exists.
     expect((await send().expect(200)).body).toEqual(first.body);

@@ -1,6 +1,12 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
-import { CONSENT_VERSIONS, CoachClientDetailSchema, CoachClientSchema, ProblemDetailsSchema } from '@noexcuse/contracts';
+import {
+  CONSENT_VERSIONS,
+  CoachClientDetailSchema,
+  CoachClientSchema,
+  INVITE_CODE_LENGTH,
+  ProblemDetailsSchema,
+} from '@noexcuse/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Clock } from '../src/common/clock/clock';
@@ -51,7 +57,7 @@ describe('coaching invites', () => {
     const client = await signIn(app, 'client', 'Ada');
 
     const invite = await createInvite(app, coach);
-    expect(invite.code).toHaveLength(26);
+    expect(invite.code).toHaveLength(INVITE_CODE_LENGTH);
     expect(invite.expiresAt).toBe(new Date(START.getTime() + INVITE_TTL_HOURS * HOUR_MS).toISOString());
 
     const redeemed = await redeem(app, client, invite.code).expect(201);
