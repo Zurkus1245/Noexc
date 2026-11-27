@@ -11,7 +11,7 @@ export interface AppTextProps extends TextProps {
 const TONE_COLOR = {
   default: colors.text,
   muted: colors.textMuted,
-  danger: colors.danger,
+  danger: colors.dangerText,
 } as const satisfies Record<TextTone, string>;
 
 export function Text({ variant = 'body', tone = 'default', style, ...rest }: AppTextProps) {

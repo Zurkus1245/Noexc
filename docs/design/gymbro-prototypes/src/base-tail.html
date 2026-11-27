@@ -1,0 +1,138 @@
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+ <filter id="lg" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+  <feTurbulence type="fractalNoise" baseFrequency="0.012 0.018" numOctaves="2" seed="7" result="n"/>
+  <feGaussianBlur in="n" stdDeviation="2" result="nb"/>
+  <feDisplacementMap in="SourceGraphic" in2="nb" scale="18" xChannelSelector="R" yChannelSelector="G"/>
+ </filter>
+ <filter id="lg-thick" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+  <feTurbulence type="fractalNoise" baseFrequency="0.008 0.012" numOctaves="2" seed="3" result="n"/>
+  <feGaussianBlur in="n" stdDeviation="3" result="nb"/>
+  <feDisplacementMap in="SourceGraphic" in2="nb" scale="34" xChannelSelector="R" yChannelSelector="G"/>
+ </filter>
+</svg>
+<script>
+/* Liquid Glass interactions (WWDC25): specular follows pointer; touch = gel flex + glow from touch point */
+(()=>{const SEL='.tabs,.btn,.back,.step,.seg,.chip,.tick,.toast,.ctrl button,.name-clear';
+ document.addEventListener('pointermove',e=>{document.querySelectorAll(SEL).forEach(el=>{const r=el.getBoundingClientRect();if(!r.width)return;
+  const x=Math.max(-20,Math.min(120,(e.clientX-r.left)/r.width*100)),y=Math.max(-40,Math.min(140,(e.clientY-r.top)/r.height*100));
+  el.style.setProperty('--lx',x+'%');el.style.setProperty('--ly',y+'%')})},{passive:true});
+ document.addEventListener('pointerdown',e=>{const el=e.target.closest(SEL);if(!el)return;const r=el.getBoundingClientRect();
+  const g=document.createElement('i');g.className='lg-glow';g.style.left=(e.clientX-r.left)+'px';g.style.top=(e.clientY-r.top)+'px';
+  if(getComputedStyle(el).position==='static')el.style.position='relative';el.appendChild(g);setTimeout(()=>g.remove(),700);
+  el.classList.remove('lg-release');el.classList.add('lg-press')});
+ const up=()=>document.querySelectorAll('.lg-press').forEach(el=>{el.classList.remove('lg-press');el.classList.add('lg-release');setTimeout(()=>el.classList.remove('lg-release'),600)});
+ document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up);
+})();
+</script>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+ <filter id="lgE" color-interpolation-filters="sRGB"><feImage id="lgMapA" preserveAspectRatio="none" result="m"/><feDisplacementMap in="SourceGraphic" in2="m" scale="14" xChannelSelector="R" yChannelSelector="G"/></filter>
+ <filter id="lgE-thick" color-interpolation-filters="sRGB"><feImage id="lgMapB" preserveAspectRatio="none" result="m"/><feDisplacementMap in="SourceGraphic" in2="m" scale="22" xChannelSelector="R" yChannelSelector="G"/></filter>
+</svg>
+<script>
+/* Edge-refraction map: R/G encode displacement toward the center, strong only near the rim (squircle edge, ease-in curve) */
+(()=>{const N=256,c=document.createElement('canvas');c.width=c.height=N;const x=c.getContext('2d'),img=x.createImageData(N,N),W=.16;
+ for(let j=0;j<N;j++)for(let i=0;i<N;i++){const u=(i+.5)/N,v=(j+.5)/N,d=Math.min(u,1-u,v,1-v);let s=d<W?Math.pow(1-d/W,3)*(.6+.4*Math.cos((1-d/W)*Math.PI/2)):0;
+  let dx=.5-u,dy=.5-v;const L=Math.hypot(dx,dy)||1;dx/=L;dy/=L;const k=(j*N+i)*4;
+  img.data[k]=128+127*s*dx;img.data[k+1]=128+127*s*dy;img.data[k+2]=128;img.data[k+3]=255}
+ x.putImageData(img,0,0);const url=c.toDataURL();
+ ['lgMapA','lgMapB'].forEach(id=>{const e=document.getElementById(id);e.setAttribute('href',url);e.setAttributeNS('http://www.w3.org/1999/xlink','href',url)});
+ document.addEventListener('pointermove',e=>{document.querySelectorAll('.card,.opt,.field').forEach(el=>{const r=el.getBoundingClientRect();if(!r.width)return;
+  el.style.setProperty('--lx',((e.clientX-r.left)/r.width*100)+'%');el.style.setProperty('--ly',((e.clientY-r.top)/r.height*100)+'%')})},{passive:true});
+})();
+</script>
+<style id="lg-motion">
+/* =========================================================
+   GymBro · Liquid Glass — motion & material rules
+   1. Glass only on the CONTROL layer: tabs, buttons, chips, segments, back, sheets, toasts.
+      Content (cards, lists, form fields) = solid tonal surfaces, no backdrop blur.
+   2. Container: neighbouring glass controls share one material; the tab "lens" morphs between tabs.
+   3. Motion = springs: press squash, release overshoot, lens stretch while travelling.
+   4. Haptics on every control tap (vibrate where supported + visual tick).
+   5. Fallbacks: no backdrop-filter, reduced transparency, reduced motion.
+   ========================================================= */
+:root{
+  --sp-press:cubic-bezier(.3,0,.5,1);
+  --sp-release:cubic-bezier(.34,1.56,.64,1);   /* overshoot */
+  --sp-lens:cubic-bezier(.5,1.6,.4,1);
+  --solid:#17191E;--solid-2:#1D2026;--solid-rim:rgba(255,255,255,.07);
+}
+:root[data-theme="light"]{--solid:#FFFFFF;--solid-2:#F6F4F0;--solid-rim:rgba(18,28,58,.08)}
+
+/* ---- 1. content is NOT glass ---- */
+.card,.card.pr,.card.coach,.idplate,.opt,.chk,.field,.set.cur,.tile-ic,.av{
+  background:var(--solid)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;
+  border:1px solid var(--solid-rim)!important;box-shadow:0 1px 0 rgba(255,255,255,.03) inset,0 6px 18px -12px rgba(0,0,0,.5)!important}
+.card:before,.opt:before,.field:before{display:none!important}
+.card.pr,.card.coach,.idplate{background:linear-gradient(180deg,rgba(46,155,255,.12),rgba(46,155,255,.04)),var(--solid)!important}
+.card.hero{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+.field{background:var(--solid-2)!important}
+.opt.on,.chk.on{border-color:var(--A)!important;box-shadow:0 0 0 1px var(--A) inset!important}
+:root[data-theme="light"] :is(.card,.opt,.chk,.field,.set.cur){box-shadow:0 1px 2px rgba(18,28,58,.06),0 8px 20px -14px rgba(18,28,58,.2)!important}
+
+/* ---- 2. tab lens: one glass drop that morphs between tabs ---- */
+.tabs{position:relative!important;isolation:isolate}
+.tabs button.on{background:transparent!important;box-shadow:none!important}
+.lg-lens{position:absolute;top:4px;bottom:4px;left:0;width:0;border-radius:999px;z-index:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.08));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5),inset 0 -1px 0 rgba(255,255,255,.08),0 4px 14px -4px rgba(0,0,0,.45);
+  transition:transform 560ms var(--sp-lens),width 560ms var(--sp-lens),scale 280ms var(--sp-release)}
+.lg-lens.moving{scale:1.12 .9}
+:root[data-theme="light"] .lg-lens{background:linear-gradient(180deg,#fff,rgba(255,255,255,.75));box-shadow:inset 0 1px 0 #fff,0 3px 10px -3px rgba(15,22,38,.22)}
+.tabs button{position:relative;z-index:1}
+
+/* ---- 3. spring press on every glass control ---- */
+:is(.btn,.chip,.seg button,.back,.step,.tick,.tabs button,button.pill,.ctrl button){
+  transition:transform 520ms var(--sp-release),filter 300ms ease!important}
+:is(.btn,.chip,.seg button,.back,.step,.tick,.tabs button,button.pill,.ctrl button):active{
+  transform:scale(.94)!important;filter:brightness(1.12);transition:transform 120ms var(--sp-press),filter 120ms!important}
+.btn.p:active{transform:scale(.97,.93)!important}
+
+/* glass drops materialize with a liquid overshoot */
+@keyframes lgDrop{0%{opacity:0;transform:scale(.82);filter:blur(6px)}60%{opacity:1;transform:scale(1.03);filter:blur(0)}100%{transform:none}}
+.scr.fwd :is(.btn,.back,.chip,.seg),.scr.bwd :is(.btn,.back,.chip,.seg){animation:lgDrop 620ms var(--sp-release) both .08s}
+.sheet>div{animation:lgSheet 640ms var(--sp-release) both!important}
+@keyframes lgSheet{0%{transform:translateY(100%) scaleX(.92);border-radius:60px 60px 0 0}70%{transform:translateY(-2%) scaleX(1.01)}100%{transform:none}}
+
+/* scroll edge: content dissolves under floating glass instead of a hard cut */
+.body{-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 14px,#000 calc(100% - 18px),transparent);mask-image:linear-gradient(180deg,transparent 0,#000 14px,#000 calc(100% - 18px),transparent)}
+
+/* ---- 4. haptic tick (visual echo) ---- */
+.lg-tick{position:absolute;border-radius:inherit;inset:-1px;pointer-events:none;z-index:4;box-shadow:0 0 0 0 rgba(255,255,255,.45);animation:lgTick 420ms ease-out forwards}
+@keyframes lgTick{to{box-shadow:0 0 0 10px rgba(255,255,255,0)}}
+
+/* ---- 5. fallbacks ---- */
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  :is(.tabs,.btn.s,.back,.step,.seg,.toast,.sheet>div,.chip,.tick){background:var(--solid-2)!important}}
+@media (prefers-reduced-transparency:reduce){.lg-lens{background:var(--solid-2)!important}.body{mask-image:none;-webkit-mask-image:none}}
+@media (prefers-reduced-motion:reduce){.lg-lens,.lg-tick{transition:none!important;animation:none!important}
+  :is(.btn,.chip,.tabs button):active{transform:none!important}}
+</style>
+<script id="lg-motion-js">
+(()=>{
+  const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  // tab lens (container morph)
+  function lens(tabs){
+    let l=tabs.querySelector('.lg-lens');
+    if(!l){l=document.createElement('i');l.className='lg-lens';tabs.prepend(l);
+      if(window._lgX!==undefined){l.style.transition='none';l.style.transform=`translateX(${window._lgX}px)`;l.style.width=window._lgW+'px';l._x=window._lgX;l.offsetWidth;l.style.transition='';}}
+    const on=tabs.querySelector('button.on');if(!on)return;
+    const x=on.offsetLeft,w=on.offsetWidth,prev=l._x;window._lgX=x;window._lgW=w;
+    if(prev!==undefined&&prev!==x&&!reduce){l.classList.add('moving');clearTimeout(l._t);l._t=setTimeout(()=>l.classList.remove('moving'),260);}
+    l.style.transform=`translateX(${x}px)`;l.style.width=w+'px';l._x=x;
+  }
+  const sync=()=>document.querySelectorAll('.tabs').forEach(lens);
+  new MutationObserver(()=>requestAnimationFrame(sync)).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
+  addEventListener('resize',sync);sync();
+  // haptics
+  document.addEventListener('pointerdown',e=>{
+    const c=e.target.closest('.btn,.chip,.seg button,.back,.step,.tick,.tabs button,button.pill,.opt,.chk');if(!c)return;
+    if(navigator.vibrate)try{navigator.vibrate(c.matches('.btn.p')?12:6)}catch(_){}
+    if(reduce)return;
+    const t=document.createElement('span');t.className='lg-tick';
+    if(getComputedStyle(c).position==='static')c.style.position='relative';
+    c.appendChild(t);setTimeout(()=>t.remove(),450);
+  },{passive:true});
+})();
+</script>
+</body>
+</html>

@@ -1,8 +1,9 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { colors, radii, spacing, TOUCH_TARGET_MIN_HEIGHT } from '../tokens';
+import { borders, colors, spacing, TOUCH_TARGET_MIN_HEIGHT } from '../tokens';
 import { Text } from './Text';
 
 const BOX_SIZE = 24;
+const BOX_RADIUS = 7;
 const CHECK_MARK = '\u2713';
 
 export interface CheckboxProps {
@@ -42,8 +43,8 @@ const styles = StyleSheet.create({
   box: {
     width: BOX_SIZE,
     height: BOX_SIZE,
-    borderRadius: radii.sm,
-    borderWidth: 2,
+    borderRadius: BOX_RADIUS,
+    borderWidth: borders.control,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',

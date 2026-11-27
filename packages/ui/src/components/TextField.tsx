@@ -1,8 +1,6 @@
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
-import { colors, radii, spacing, TOUCH_TARGET_MIN_HEIGHT } from '../tokens';
+import { borders, colors, COLOR_SCHEME, radii, spacing, TOUCH_TARGET_MIN_HEIGHT } from '../tokens';
 import { Text } from './Text';
-
-const INPUT_BORDER_WIDTH = 1;
 
 export interface TextFieldProps extends TextInputProps {
   readonly label: string;
@@ -18,6 +16,7 @@ export function TextField({ label, error, style, ...rest }: TextFieldProps) {
         accessibilityLabel={label}
         accessibilityState={{ disabled: rest.editable === false }}
         placeholderTextColor={colors.textMuted}
+        keyboardAppearance={COLOR_SCHEME}
         style={[styles.input, hasError && styles.inputError, style]}
         {...rest}
       />
@@ -35,11 +34,11 @@ const styles = StyleSheet.create({
   input: {
     minHeight: TOUCH_TARGET_MIN_HEIGHT,
     borderRadius: radii.sm,
-    borderWidth: INPUT_BORDER_WIDTH,
+    borderWidth: borders.control,
     borderColor: colors.border,
     paddingHorizontal: spacing.md,
     color: colors.text,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceRaised,
   },
-  inputError: { borderColor: colors.danger },
+  inputError: { borderColor: colors.dangerText },
 });

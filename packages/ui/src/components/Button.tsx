@@ -14,7 +14,7 @@ export interface ButtonProps extends Omit<PressableProps, 'children' | 'style'> 
 const VARIANT_STYLE = {
   primary: { backgroundColor: colors.primary, text: colors.primaryText },
   secondary: { backgroundColor: colors.secondary, text: colors.secondaryText },
-  danger: { backgroundColor: colors.danger, text: colors.primaryText },
+  danger: { backgroundColor: colors.danger, text: colors.dangerContrast },
 } as const satisfies Record<ButtonVariant, { backgroundColor: string; text: string }>;
 
 export function Button({ label, variant = 'primary', loading = false, disabled, style, ...rest }: ButtonProps) {
@@ -48,8 +48,8 @@ export function Button({ label, variant = 'primary', loading = false, disabled, 
 const styles = StyleSheet.create({
   base: {
     minHeight: TOUCH_TARGET_MIN_HEIGHT,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
   },
