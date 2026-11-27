@@ -16,7 +16,8 @@ export class IdentityRepository {
   }
 
   // One transaction: the foreign module closes its own rows first, then the user row goes.
-  // Consents are removed by ON DELETE CASCADE on the user foreign key.
+  // Consents are removed by ON DELETE CASCADE on the user foreign key. Stored responses go both when the user sent
+  // them and when they carry the user's data on someone else's request (a coach writing the client's plan).
   deleteAccount(
     userId: string,
     authSubject: string,
@@ -24,7 +25,7 @@ export class IdentityRepository {
   ): Promise<void> {
     return this.prisma.$transaction(async (tx) => {
       await closeForeignRows(tx);
-      await tx.idempotencyRecord.deleteMany({ where: { subject: authSubject } });
+      await tx.idempotencyRecord.deleteMany({ where: { OR: [{ subject: authSubject }, { dataSubjectId: userId }] } });
       await tx.user.delete({ where: { id: userId } });
     });
   }

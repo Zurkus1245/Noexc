@@ -13,6 +13,7 @@ import {
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/validation/zod-validation.pipe';
 import { IdempotencyInterceptor } from '../../infra/idempotency/idempotency.interceptor';
+import { IdempotentDataSubject } from '../../infra/idempotency/idempotent-data-subject.decorator';
 import { CurrentUser } from '../auth/session/current-user.decorator';
 import { CoachingService } from '../coaching';
 import { PlansService } from './plans.service';
@@ -31,6 +32,7 @@ export class PlansController {
 
   @HttpCode(HttpStatus.OK)
   @Put()
+  @IdempotentDataSubject('clientId')
   @UseInterceptors(IdempotencyInterceptor)
   putPlan(
     @CurrentUser() user: User,

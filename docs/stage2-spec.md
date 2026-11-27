@@ -7,7 +7,8 @@ Stage 1 rules, `CLAUDE.md`, and `docs/stage1-spec.md` still apply (problem+json,
 - One plan per CoachClient link. The plan is a chain of **immutable versions**; each edit is a full new version (whole-document replace). There are no partial patches.
 - Optimistic concurrency: a write carries `baseVersion`. If it does not match the current version: 409 `VERSION_CONFLICT`. An empty plan is version 0 and has no row.
 - Calendar entries reference a workout by a stable `workoutKey` (uuid inside the content) and always resolve against the **current** version. That is how the client sees the coach's edits. Stage 3 snapshots the plan into the log; nothing here mutates history.
-- A new version must still contain every `workoutKey` referenced by an existing calendar entry. Otherwise: 409 `WORKOUT_SCHEDULED`, with `errors[]` listing the keys.
+- A new version must still contain every `workoutKey` referenced by a calendar entry dated on or after the client's local today. Otherwise: 409 `WORKOUT_SCHEDULED`, with `errors[]` listing the keys. Past entries do not pin the plan; a past entry whose workout left the plan resolves to `workout: null`.
+- Past entries (dated before the client's local today) are history: moving or deleting one answers 409 `ENTRY_IN_PAST`.
 - Access: every coach route goes through `AccessPolicy.assertClientAccess(actor, clientId, 'health')`. Training data is treated as health data. Paused links count as open (reads and writes allowed, same as stage 1). Ended or foreign links: 404.
 - Ending a link (by coach, client, or account deletion) deletes that link's calendar entries dated on or after the client's local today, in the **same transaction**. Past entries and plan versions remain, and the client still sees them.
 - Dates are `YYYY-MM-DD` in the client's TZ (`User.timezone`). "Today" is computed by the domain function `todayInTimeZone(tz, now)` with an injected clock. Never use the server-local date.
@@ -29,7 +30,7 @@ CalendarEntrySchema { id: uuid, linkId: uuid, clientId: uuid, coachId: uuid | nu
 CreateCalendarEntryRequestSchema { id: uuid (client-generated), date: LocalDate, workoutKey: uuid }
 MoveCalendarEntryRequestSchema { date: LocalDate }
 ```
-- Add error codes: `VERSION_CONFLICT`, `WORKOUT_SCHEDULED`, `WORKOUT_NOT_IN_PLAN`.
+- Add error codes: `VERSION_CONFLICT`, `WORKOUT_SCHEDULED`, `WORKOUT_NOT_IN_PLAN`, `ENTRY_IN_PAST`.
 - Constants: `PLAN_LIMITS`, `CALENDAR_MAX_RANGE_DAYS = 62`, `CALENDAR_DATE_WINDOW_DAYS = 366` (entries must fall within ±366 days of the client's today).
 
 ## Domain (`packages/domain/src/plan.ts`, `calendar.ts`; pure, no IO)

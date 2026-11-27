@@ -267,7 +267,7 @@ export type GrantConsentRequest = z.infer<typeof GrantConsentRequestSchema>;
 
 // errors.d.ts
 import { z } from 'zod';
-export declare const ERROR_CODES: readonly ["VALIDATION_FAILED", "UNAUTHENTICATED", "PROFILE_REQUIRED", "PROFILE_EXISTS", "FORBIDDEN_ROLE", "NOT_FOUND", "INVITE_INVALID", "LINK_EXISTS", "INVALID_TRANSITION", "CONSENT_REQUIRED", "RATE_LIMITED", "IDEMPOTENCY_CONFLICT", "VERSION_CONFLICT", "WORKOUT_SCHEDULED", "WORKOUT_NOT_IN_PLAN", "ENTRY_ID_CONFLICT", "INTERNAL"];
+export declare const ERROR_CODES: readonly ["VALIDATION_FAILED", "UNAUTHENTICATED", "PROFILE_REQUIRED", "PROFILE_EXISTS", "FORBIDDEN_ROLE", "NOT_FOUND", "INVITE_INVALID", "LINK_EXISTS", "INVALID_TRANSITION", "CONSENT_REQUIRED", "RATE_LIMITED", "IDEMPOTENCY_CONFLICT", "VERSION_CONFLICT", "WORKOUT_SCHEDULED", "WORKOUT_NOT_IN_PLAN", "ENTRY_ID_CONFLICT", "ENTRY_IN_PAST", "INTERNAL"];
 export declare const ErrorCodeSchema: z.ZodCatch<z.ZodUnion<readonly [z.ZodEnum<{
     VALIDATION_FAILED: "VALIDATION_FAILED";
     UNAUTHENTICATED: "UNAUTHENTICATED";
@@ -285,6 +285,7 @@ export declare const ErrorCodeSchema: z.ZodCatch<z.ZodUnion<readonly [z.ZodEnum<
     WORKOUT_SCHEDULED: "WORKOUT_SCHEDULED";
     WORKOUT_NOT_IN_PLAN: "WORKOUT_NOT_IN_PLAN";
     ENTRY_ID_CONFLICT: "ENTRY_ID_CONFLICT";
+    ENTRY_IN_PAST: "ENTRY_IN_PAST";
     INTERNAL: "INTERNAL";
 }>, z.ZodLiteral<"unknown">]>>;
 export type ErrorCode = z.infer<typeof ErrorCodeSchema>;
@@ -314,6 +315,7 @@ export declare const ProblemDetailsSchema: z.ZodObject<{
         WORKOUT_SCHEDULED: "WORKOUT_SCHEDULED";
         WORKOUT_NOT_IN_PLAN: "WORKOUT_NOT_IN_PLAN";
         ENTRY_ID_CONFLICT: "ENTRY_ID_CONFLICT";
+        ENTRY_IN_PAST: "ENTRY_IN_PAST";
         INTERNAL: "INTERNAL";
     }>, z.ZodLiteral<"unknown">]>>;
     detail: z.ZodString;

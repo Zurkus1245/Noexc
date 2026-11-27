@@ -54,9 +54,10 @@ export class PlansRepository {
   }
 
   // Distinct keys referenced by any entry of the link: the plan may not drop them.
-  async scheduledWorkoutKeys(linkId: string, tx: Db): Promise<string[]> {
+  // Workouts on entries dated from the cutoff (the client's local today). Past entries do not pin the plan.
+  async scheduledWorkoutKeys(linkId: string, from: Date, tx: Db): Promise<string[]> {
     const rows = await tx.calendarEntry.findMany({
-      where: { linkId },
+      where: { linkId, date: { gte: from } },
       distinct: ['workoutKey'],
       select: { workoutKey: true },
     });

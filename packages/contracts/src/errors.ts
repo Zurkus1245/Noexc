@@ -18,6 +18,7 @@ export const ERROR_CODES = [
   'WORKOUT_SCHEDULED',
   'WORKOUT_NOT_IN_PLAN',
   'ENTRY_ID_CONFLICT',
+  'ENTRY_IN_PAST',
   'INTERNAL',
 ] as const;
 

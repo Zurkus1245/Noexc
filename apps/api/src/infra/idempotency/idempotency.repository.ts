@@ -4,7 +4,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 
 export type RecordKey = { subject: string; key: string };
 
-export type NewRecord = RecordKey & { requestHash: string; createdAt: Date; expiresAt: Date };
+export type NewRecord = RecordKey & { requestHash: string; createdAt: Date; expiresAt: Date; dataSubjectId: string | null };
 
 @Injectable()
 export class IdempotencyRepository {

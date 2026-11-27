@@ -120,6 +120,7 @@ describe('idempotency', () => {
       requestHash: 'h'.repeat(64),
       createdAt: START,
       expiresAt: new Date(START.getTime() + HOUR_MS),
+      dataSubjectId: null,
     });
 
     await records.releaseExpired(reservation, START);

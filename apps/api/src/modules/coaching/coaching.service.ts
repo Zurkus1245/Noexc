@@ -38,6 +38,8 @@ import { type InviteCodeGenerator, INVITE_CODE_GENERATOR, hashInviteCode } from 
 const BAD_REQUEST_STATUS = 400;
 const NOT_FOUND_STATUS = 404;
 const CONFLICT_STATUS = 409;
+// Upper bound on batches one list request reads while skipping clients who withdrew coach_access.
+export const MAX_LINK_SCAN_BATCHES = 5;
 
 type OpenLinkRow = Awaited<ReturnType<CoachingRepository['listOpenLinksOfCoach']>>[number];
 
@@ -126,6 +128,8 @@ export class CoachingService {
   }
 
   // Keyset scan that skips links whose client no longer grants coach_access, so a page holds only visible clients.
+  // The scan is bounded: past MAX_LINK_SCAN_BATCHES the page returns short (possibly empty) with a cursor at the last
+  // scanned row, so many hidden clients cost a few more page requests instead of one unbounded read.
   private async visibleLinkPage(
     coachId: string,
     after: LinkCursor | null,
@@ -133,7 +137,7 @@ export class CoachingService {
   ): Promise<{ items: OpenLinkRow[]; next: LinkCursor | null }> {
     const items: OpenLinkRow[] = [];
     let cursor = after;
-    for (;;) {
+    for (let batch = 1; ; batch += 1) {
       const rows = await this.repo.listOpenLinksOfCoach(coachId, cursor, limit);
       const visible = new Set((await this.access.filterVisibleLinks(coachId, rows)).map((row) => row.id));
       for (const row of rows) {
@@ -144,6 +148,7 @@ export class CoachingService {
         items.push(row);
       }
       if (rows.length < limit) return { items, next: null };
+      if (batch >= MAX_LINK_SCAN_BATCHES) return { items, next: cursor };
     }
   }
 

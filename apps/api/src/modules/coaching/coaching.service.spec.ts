@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { User } from '@noexcuse/contracts';
-import { CoachingService } from './coaching.service';
+import { CoachingService, MAX_LINK_SCAN_BATCHES } from './coaching.service';
 import type { CoachingRepository } from './coaching.repository';
 import type { AccessPolicy } from './access-policy.service';
 import type { ConsentService } from '../consent/consent.service';
@@ -76,6 +76,32 @@ describe('CoachingService.listClients when a client deletes their account mid-re
 
     expect(page.items.map((item) => item.clientId)).toEqual([otherClientId]);
     expect(page.items[0]?.displayName).toBe('Ada');
+  });
+});
+
+// Regression: with many clients who withdrew coach_access, one list request scanned every link of the coach.
+describe('CoachingService.listClients when most clients are hidden', () => {
+  it('stops after a bounded number of batches and hands back a cursor to continue', async () => {
+    const limit = 2;
+    let created = 0;
+    const hiddenBatch = () =>
+      Array.from({ length: limit }, () => {
+        created += 1;
+        const suffix = String(created).padStart(12, '0');
+        return { ...openLinkRow, id: `33333333-3333-4333-8333-${suffix}`, createdAt: new Date(NOW.getTime() - created) };
+      });
+    const listOpenLinksOfCoach = vi.fn(async () => hiddenBatch());
+    const service = buildService({
+      repo: { listOpenLinksOfCoach },
+      access: { filterVisibleLinks: vi.fn(async () => []) },
+      session: { findPublicProfiles: vi.fn(async () => new Map()) },
+    });
+
+    const page = await service.listClients(COACH, { limit });
+
+    expect(listOpenLinksOfCoach).toHaveBeenCalledTimes(MAX_LINK_SCAN_BATCHES);
+    expect(page.items).toEqual([]);
+    expect(page.nextCursor).not.toBeNull();
   });
 });
 

@@ -228,4 +228,61 @@ describe('plans and calendar', () => {
     expect(await prisma.planVersion.count()).toBe(0);
     expect(await prisma.calendarEntry.count()).toBe(0);
   });
+
+  // Regression: a past entry pinned its workout in the plan forever and could be moved or deleted.
+  it('keeps past entries fixed and lets the plan drop a workout that is only in the past', async () => {
+    const coach = await signIn(app, 'coach');
+    const client = await signIn(app, 'client');
+    await linkBetween(app, coach, client);
+    const workoutKey = randomUUID();
+    await putPlan(coach, client, 0, planWith(workoutKey, 'Push')).expect(200);
+    const entryId = randomUUID();
+    await api()
+      .post(calendarPath(client))
+      .set('Authorization', coach.auth)
+      .send({ id: entryId, date: addDays(today(), -1), workoutKey })
+      .expect(201);
+
+    const move = await api()
+      .patch(`${calendarPath(client)}/${entryId}`)
+      .set('Authorization', coach.auth)
+      .send({ date: today() })
+      .expect(409);
+    expect(move.body.code).toBe('ENTRY_IN_PAST');
+    const remove = await api().delete(`${calendarPath(client)}/${entryId}`).set('Authorization', coach.auth).expect(409);
+    expect(remove.body.code).toBe('ENTRY_IN_PAST');
+
+    await putPlan(coach, client, 1, planWith(randomUUID(), 'Pull')).expect(200);
+  });
+
+  // Regression: the coach's stored replay of the client's plan outlived the client's account deletion.
+  it('deletes stored responses that carry the client data with the client account', async () => {
+    const coach = await signIn(app, 'coach');
+    const client = await signIn(app, 'client');
+    await linkBetween(app, coach, client);
+    const workoutKey = randomUUID();
+    const idempotencyKey = randomUUID();
+    const send = () =>
+      api()
+        .put(planPath(client))
+        .set('Authorization', coach.auth)
+        .set('Idempotency-Key', idempotencyKey)
+        .send({ baseVersion: 0, content: planWith(workoutKey, 'Push') });
+    const first = await send().expect(200);
+    // The replay still works while the client exists.
+    expect((await send().expect(200)).body).toEqual(first.body);
+    await api()
+      .post(calendarPath(client))
+      .set('Authorization', coach.auth)
+      .set('Idempotency-Key', randomUUID())
+      .send({ id: randomUUID(), date: today(), workoutKey })
+      .expect(201);
+
+    const prisma = app.get(PrismaService);
+    expect(await prisma.idempotencyRecord.count({ where: { dataSubjectId: client.id } })).toBe(2);
+
+    await api().delete('/v1/me').set('Authorization', client.auth).expect(204);
+
+    expect(await prisma.idempotencyRecord.count({ where: { dataSubjectId: client.id } })).toBe(0);
+  });
 });

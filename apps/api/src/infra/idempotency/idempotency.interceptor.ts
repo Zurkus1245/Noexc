@@ -15,6 +15,7 @@ import { CLOCK, type Clock } from '../../common/clock/clock';
 import { type RequestWithContext, requireSubject } from '../../common/request/request-context';
 import { isUniqueViolation } from '../../common/prisma/prisma-errors';
 import type { Prisma } from '../../generated/prisma/client';
+import { IDEMPOTENT_DATA_SUBJECT_KEY } from './idempotent-data-subject.decorator';
 import { IDEMPOTENT_WITHOUT_REPLAY_KEY } from './idempotent-without-replay.decorator';
 import { IdempotencyRepository, type RecordKey } from './idempotency.repository';
 
@@ -61,7 +62,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
     // Expired records only: a concurrent request may have reserved the key just now, and that reservation must survive.
     if (existing !== null) await this.records.releaseExpired(recordKey, now);
 
-    await this.reserve(recordKey, requestHash, now);
+    await this.reserve(recordKey, requestHash, now, this.dataSubjectOf(context, request));
 
     return next.handle().pipe(
       switchMap(async (body: unknown) => {
@@ -85,13 +86,25 @@ export class IdempotencyInterceptor implements NestInterceptor {
     );
   }
 
-  private async reserve(recordKey: RecordKey, requestHash: string, now: Date): Promise<void> {
+  // Interceptors run before route pipes, so the parameter is validated here; a malformed id fails the route anyway.
+  private dataSubjectOf(context: ExecutionContext, request: RequestWithContext): string | null {
+    const param = this.reflector.getAllAndOverride<string | undefined>(IDEMPOTENT_DATA_SUBJECT_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (param === undefined) return null;
+    const parsed = UuidSchema.safeParse(request.params[param]);
+    return parsed.success ? parsed.data : null;
+  }
+
+  private async reserve(recordKey: RecordKey, requestHash: string, now: Date, dataSubjectId: string | null): Promise<void> {
     try {
       await this.records.insert({
         ...recordKey,
         requestHash,
         createdAt: now,
         expiresAt: new Date(now.getTime() + IDEMPOTENCY_TTL_MS),
+        dataSubjectId,
       });
     } catch (error) {
       // Lost the insert race: the request holding this key is still in flight.

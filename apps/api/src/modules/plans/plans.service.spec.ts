@@ -262,9 +262,49 @@ describe('PlansService calendar writes', () => {
   });
 
   it('answers 404 when the entry is deleted between the read and the delete', async () => {
-    const { service } = buildService({ repo: { deleteEntry: vi.fn(async () => 0) } });
+    const { service } = buildService({
+      repo: { findEntryOfLink: vi.fn(async () => storedEntry()), deleteEntry: vi.fn(async () => 0) },
+    });
 
     await expect(service.deleteEntry(COACH, CLIENT_ID, ENTRY_ID)).rejects.toMatchObject({ status: 404, code: 'NOT_FOUND' });
+  });
+});
+
+// Regression: past entries could be moved or deleted, and they pinned their workouts in the plan forever.
+describe('PlansService keeps history fixed', () => {
+  const pastEntry = {
+    id: ENTRY_ID,
+    linkId: LINK_ID,
+    clientId: CLIENT_ID,
+    date: new Date('2026-11-20T00:00:00.000Z'),
+    workoutKey: WORKOUT_KEY,
+    createdAt: NOW,
+    updatedAt: NOW,
+  };
+
+  it('answers ENTRY_IN_PAST when moving an entry dated before the client today', async () => {
+    const { service, repo } = buildService({ repo: { findEntryOfLink: vi.fn(async () => pastEntry) } });
+
+    await expect(service.moveEntry(COACH, CLIENT_ID, ENTRY_ID, { date: '2026-11-25' })).rejects.toMatchObject({
+      status: 409,
+      code: 'ENTRY_IN_PAST',
+    });
+    expect(repo.moveEntry).not.toHaveBeenCalled();
+  });
+
+  it('answers ENTRY_IN_PAST when deleting an entry dated before the client today', async () => {
+    const { service, repo } = buildService({ repo: { findEntryOfLink: vi.fn(async () => pastEntry) } });
+
+    await expect(service.deleteEntry(COACH, CLIENT_ID, ENTRY_ID)).rejects.toMatchObject({ status: 409, code: 'ENTRY_IN_PAST' });
+    expect(repo.deleteEntry).not.toHaveBeenCalled();
+  });
+
+  it('counts only entries from the client today when checking which workouts the plan must keep', async () => {
+    const { service, repo } = buildService();
+
+    await service.putPlan(COACH, CLIENT_ID, { baseVersion: 0, content: content(OTHER_KEY) });
+
+    expect(repo.scheduledWorkoutKeys).toHaveBeenCalledWith(LINK_ID, new Date('2026-11-21T00:00:00.000Z'), expect.anything());
   });
 });
 

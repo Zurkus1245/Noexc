@@ -144,7 +144,10 @@ model IdempotencyRecord {
   responseBody   Json?
   createdAt      DateTime  @default(now()) @db.Timestamptz(3)
   expiresAt      DateTime  @db.Timestamptz(3)
+  // The user whose data the stored response carries, when it is not the caller (see IdempotentDataSubject).
+  dataSubjectId  String?   @db.Uuid
 
   @@id([subject, key])
   @@index([expiresAt])
+  @@index([dataSubjectId])
 }

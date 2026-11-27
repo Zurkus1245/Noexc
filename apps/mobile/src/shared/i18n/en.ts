@@ -83,6 +83,7 @@ export const en = {
   'error.WORKOUT_SCHEDULED': 'This workout is scheduled. Remove it from the calendar first.',
   'error.WORKOUT_NOT_IN_PLAN': 'This workout is not in the current plan.',
   'error.ENTRY_ID_CONFLICT': 'This calendar entry id is already used for another entry.',
+  'error.ENTRY_IN_PAST': 'Past workouts stay as they were and cannot be moved or removed.',
   'error.INTERNAL': 'Something went wrong. Try again.',
   'common.back': 'Back',
   'common.copyFailed': 'Could not copy. Select the code and copy it manually.',

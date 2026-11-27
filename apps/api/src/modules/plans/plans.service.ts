@@ -65,7 +65,7 @@ export class PlansService implements LinkLifecycleHook {
         const currentVersion = current?.version ?? EMPTY_PLAN_VERSION;
         if (body.baseVersion !== currentVersion) throw versionConflict();
 
-        const scheduled = await this.repo.scheduledWorkoutKeys(link.id, tx);
+        const scheduled = await this.repo.scheduledWorkoutKeys(link.id, this.clientToday(link), tx);
         const missing = missingScheduledKeys(body.content, scheduled);
         if (missing.length > 0) throw workoutScheduled(missing);
 
@@ -142,6 +142,7 @@ export class PlansService implements LinkLifecycleHook {
       this.assertDateInWindow(body.date, link.client.timezone);
       const entry = await this.repo.findEntryOfLink(entryId, link.id, tx);
       if (entry === null) throw notFound();
+      this.assertNotPast(entry.date, link);
 
       const content = contentOf(await this.repo.currentVersion(link.id, tx));
       if (!workoutKeys(content).has(entry.workoutKey)) throw workoutNotInPlan();
@@ -155,6 +156,9 @@ export class PlansService implements LinkLifecycleHook {
   async deleteEntry(coach: User, clientId: string, entryId: string): Promise<void> {
     await this.repo.transaction(async (tx) => {
       const link = await this.lockedCoachLink(tx, coach, clientId);
+      const entry = await this.repo.findEntryOfLink(entryId, link.id, tx);
+      if (entry === null) throw notFound();
+      this.assertNotPast(entry.date, link);
       if ((await this.repo.deleteEntry(entryId, link.id, tx)) === 0) throw notFound();
     });
   }
@@ -209,6 +213,16 @@ export class PlansService implements LinkLifecycleHook {
   private async coachLink(coach: User, clientId: string): Promise<CoachLink> {
     assertRole(coach, 'coach');
     return this.access.assertClientAccess({ id: coach.id, role: 'coach' }, clientId, 'health');
+  }
+
+  // The client's local today as a stored calendar date: entries before it are history.
+  private clientToday(link: CoachLink): Date {
+    return toDbDate(todayInTimeZone(link.client.timezone, this.clock.now()));
+  }
+
+  // History is fixed: a past entry is neither moved nor removed, so the client's record of what was planned stays true.
+  private assertNotPast(entryDate: Date, link: CoachLink): void {
+    if (entryDate.getTime() < this.clientToday(link).getTime()) throw entryInPast();
   }
 
   private assertDateInWindow(date: LocalDate, timezone: string): void {
@@ -285,6 +299,10 @@ function workoutNotInPlan(): ApiError {
 // The client-generated entry id is the entry's identity: reused for another slot it is a conflict.
 function entryIdConflict(): ApiError {
   return new ApiError(CONFLICT_STATUS, 'ENTRY_ID_CONFLICT', 'Calendar entry id is already used for another entry');
+}
+
+function entryInPast(): ApiError {
+  return new ApiError(CONFLICT_STATUS, 'ENTRY_IN_PAST', 'Past calendar entries cannot be moved or removed');
 }
 
 function notFound(): ApiError {
